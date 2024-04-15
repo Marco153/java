@@ -3,12 +3,14 @@ package site;
 import java.io.*;
 
 
+
 import java.net.*;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.Date;
 import java.util.Map;
 import java.util.List;
+import java.util.Set;
 
 import java.sql.*;
 	
@@ -83,13 +85,52 @@ public class main {
 					
 	                System.out.println("req is "+req);
 	                
-	                if(reqHttp.url.equals("/home"))
+	                if(reqHttp.url.equals("/"))
 	                {
 						SendFile("index.html", socket);
 	                }
 	                else if(reqHttp.url.equals("/main.js"))
 	                {
 						SendFile("main.js", socket);
+	                }
+	                else if(reqHttp.url.equals("/dball"))
+	                {
+						Map<String, List<String>> ret = mysql.ExecuteQuery("select * from product");
+						List<String> ids = ret.get("id");
+						Set<String> keySet = ret.keySet();
+						
+						
+						String json = "{\"db\":[";
+						int idsLen = ids.size();
+						int i = 0;
+						for(String curId : ids)
+						{
+							json += "{";
+							json += "\"id\" :\"" + curId +"\",";
+							int columnIdx = 0;
+							int columnLen = keySet.size();
+							for(String column : keySet)
+							{
+								if(column == "id")
+									continue;
+								List<String> columnValues = ret.get(column);
+								json += " \"" + column +"\" :\"" + columnValues.get(Integer.parseInt(curId) - 1) + "\"";
+								
+								if(columnIdx < (columnLen - 2))
+									json += ",";
+								json += "";
+								columnIdx++;
+								
+							}
+							//json.
+							json += "}";
+							if(i < (idsLen - 1))
+								json += ",";
+							i++;
+						}
+						
+						json += "]}";
+						SendString(json, socket);
 	                }
 	                else if(reqHttp.url.equals("/dbget"))
 	                {

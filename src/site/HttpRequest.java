@@ -50,6 +50,9 @@ public class HttpRequest {
 			{
 				wordReader.GetChar();
 
+				if(!Character.isLetter(wordReader.CurChar()))
+					break;
+
 				url += wordReader.readWord();
 				if(wordReader.CurChar() == '.')
 				{
