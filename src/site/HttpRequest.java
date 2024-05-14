@@ -7,6 +7,7 @@ public class HttpRequest {
 	private String reqLine;
 	public String method;
 	public String url;
+	public String body;
 	public Map<String, String> params;
 	
 	public void ParseParams(WordReader reader)
@@ -65,7 +66,20 @@ public class HttpRequest {
 				wordReader.GetChar();
 				ParseParams(wordReader);
 			}
+			
+			reqLine = bufReader.readLine();
+			while(reqLine != null && !reqLine.isEmpty())
+			{
+				reqLine = bufReader.readLine();
+			}
 
+			reqLine = bufReader.readLine();
+			body = "";
+			while(reqLine != null && !reqLine.isEmpty())
+			{
+				body += reqLine;
+				reqLine = bufReader.readLine();
+			}
 		}
 		catch(IOException e)
 		{

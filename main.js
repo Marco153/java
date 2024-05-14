@@ -54,18 +54,31 @@ async function start()
 			{
 				tarea = document.createElement("textarea");
 				tarea.value = db[i][value];
+				tarea.setAttribute("dbid", i);
+				tarea.setAttribute("dbcol", value);
+				tarea.addEventListener("input", (e)=>{
+					let id = parseInt(e.target.getAttribute("dbid"));
+					let col = e.target.getAttribute("dbcol");
+
+					db[i][col] = e.target.value;
+				});
 			}
-
-
-				
 
 			td.appendChild(tarea);
 			thead.appendChild(td);
 		})
 		table.appendChild(thead);
 	}
+	let up_button = document.createElement("button");
+	up_button.addEventListener("click", () =>{
+		fetch(`${IP}/dbup`, 
+			{method: 'POST',
+			body: JSON.stringify(db)}
+	)})
+	up_button.textContent = "update";
 
 	document.body.appendChild(table);
+	document.body.appendChild(up_button);
 	
 }
 async function getDataBase()

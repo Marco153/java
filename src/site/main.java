@@ -11,6 +11,9 @@ import java.util.Date;
 import java.util.Map;
 import java.util.List;
 import java.util.Set;
+import org.json.JSONException;
+import org.json.JSONObject;
+import org.json.JSONArray;
 
 import java.sql.*;
 	
@@ -34,7 +37,7 @@ public class main {
 			outputStream.close();
 		}
 		public static Connection con;
-	    public static void main(String[] args) {
+	    public static void main(String[] args) throws JSONException {
 	    	String url = "jdbc:mysql://localhost:3306/products";
 	    	String username = "java";
 	    	String password = "1234";
@@ -92,6 +95,66 @@ public class main {
 	                else if(reqHttp.url.equals("/main.js"))
 	                {
 						SendFile("main.js", socket);
+	                }
+	                else if(reqHttp.url.equals("/dbup"))
+	                {
+	                	JSONArray ar = new JSONArray(reqHttp.body);
+
+	                	String json = "INSERT INTO product(";
+	                	String allColumnNames = "";
+	                	String queryUpdateEnd = "";
+	                	String values = "";
+	                	for(int i = 0; i < ar.length(); i++)
+	                	{
+
+							JSONObject obj = ar.getJSONObject(i);
+							int namesLen = obj.names().length();
+							values += "(";
+							for(int j = 0; j < namesLen; j++)
+							{
+								String columnName = obj.names().getString(j);
+								if(i == 0)
+								{
+									allColumnNames += columnName;
+									queryUpdateEnd += columnName + " = VALUES(" +columnName+")";
+								}
+								
+								String valStr = obj.getString(columnName);
+								
+								if(Character.isDigit(valStr.charAt(0)))
+								{
+									values += valStr;
+								}
+								else
+								{
+									values += "\"" + valStr + "\"";
+								}
+
+								
+								if(j < (namesLen - 1))
+								{
+									if(i == 0)
+									{
+										allColumnNames += ", ";
+										queryUpdateEnd += ", ";
+									}
+									values += ", ";
+								}
+							}
+							values += ")";
+							if(i < (ar.length() - 1))
+							{
+								values += ", ";
+							}
+	                	}
+						json += allColumnNames + ") VALUES"+values;
+						json += " ON DUPLICATE KEY UPDATE ";
+						json += queryUpdateEnd + ";";
+
+
+						System.out.println("update query is " + json);
+
+						mysql.UpdateQuery(json);
 	                }
 	                else if(reqHttp.url.equals("/dball"))
 	                {
