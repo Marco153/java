@@ -195,6 +195,15 @@ public class main {
 						json += "]}";
 						SendString(json, socket);
 	                }
+	                else if(reqHttp.url.equals("/dbrm"))
+	                {
+	                	String id = reqHttp.params.get("id");
+	                	if(id != null)
+	                	{
+	                		Map<String, List<String>> ret = mysql.ExecuteQuery("delete from product where id = "+id+";");
+	                		SendString("removed", socket);
+	                	}
+	                }
 	                else if(reqHttp.url.equals("/dbget"))
 	                {
 	                	String name = reqHttp.params.get("name");

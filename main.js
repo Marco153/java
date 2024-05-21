@@ -1,13 +1,9 @@
 window.onload = start
 let IP = "http://localhost:42069"
+let db;
 
-async function start()
+function renderDb()
 {
-	let val = await getDataBase();
-
-
-	document.getElementById("main").innerHTML += "added by js"
-	let db = val.db;
 
 	let columns = Object.getOwnPropertyNames(db[0]);
 
@@ -23,24 +19,6 @@ async function start()
 		td.appendChild(text);
 		thead.appendChild(td);
 	})
-	/*
-	let trow = document.createElement("tr");
-	let td = document.createElement("td");
-	let text = document.createElement("input");
-	text.setAttribute("type", "text");
-
-	let td2 = document.createElement("td");
-	let text2 = document.createTextNode("test2");
-
-
-	td.appendChild(text);
-	td2.appendChild(text2);
-
-	trow.appendChild(td);
-	trow.appendChild(td2);
-	table.appendChild(trow);
-	*/
-
 	
 	for(let i = 0; i < db.length; i++)
 	{
@@ -54,7 +32,7 @@ async function start()
 			{
 				tarea = document.createElement("textarea");
 				tarea.value = db[i][value];
-				tarea.setAttribute("dbid", i);
+				tarea.setAttribute("dbid", db[i].id);
 				tarea.setAttribute("dbcol", value);
 				tarea.addEventListener("input", (e)=>{
 					let id = parseInt(e.target.getAttribute("dbid"));
@@ -67,6 +45,29 @@ async function start()
 			td.appendChild(tarea);
 			thead.appendChild(td);
 		})
+		let remove = document.createElement("td");
+		let remove_button = document.createElement("button");
+		remove_button.textContent = "x";
+		remove_button.setAttribute("dbid", db[i].id);
+		remove_button.addEventListener("click", (e)=>{
+			let id = parseInt(e.target.getAttribute("dbid"));
+
+			for(let i = 0; i < db.length; i++)
+			{
+				if(db[i].id == id)
+					db.splice(i, 1);
+			}
+
+			renderDb();
+			const response = await fetch(`${IP}/dbrm?id=${id}`)
+
+		});
+
+		remove.appendChild(remove_button);
+		thead.appendChild(remove);
+
+		
+
 		table.appendChild(thead);
 	}
 	let up_button = document.createElement("button");
@@ -77,8 +78,19 @@ async function start()
 	)})
 	up_button.textContent = "update";
 
+	document.body.textContent = "";
 	document.body.appendChild(table);
 	document.body.appendChild(up_button);
+}
+async function start()
+{
+	let val = await getDataBase();
+
+
+	document.getElementById("main").innerHTML += "added by js"
+	db = val.db;
+
+	renderDb();
 	
 }
 async function getDataBase()
@@ -96,3 +108,4 @@ async function getDataBase()
 
 	return ret;
 }
+
