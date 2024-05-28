@@ -88,7 +88,11 @@ public class main {
 					
 	                System.out.println("req is "+req);
 	                
-	                if(reqHttp.url.equals("/"))
+	                if(reqHttp.url.equals("/panel"))
+	                {
+						SendFile("panel.html", socket);
+	                }
+	                else if(reqHttp.url.equals("/"))
 	                {
 						SendFile("index.html", socket);
 	                }
@@ -121,7 +125,7 @@ public class main {
 								
 								String valStr = obj.getString(columnName);
 								
-								if(Character.isDigit(valStr.charAt(0)))
+								if(!valStr.isEmpty() && Character.isDigit(valStr.charAt(0)))
 								{
 									values += valStr;
 								}
@@ -177,7 +181,7 @@ public class main {
 								if(column == "id")
 									continue;
 								List<String> columnValues = ret.get(column);
-								json += " \"" + column +"\" :\"" + columnValues.get(Integer.parseInt(curId) - 1) + "\"";
+								json += " \"" + column +"\" :\"" + columnValues.get(i) + "\"";
 								
 								if(columnIdx < (columnLen - 2))
 									json += ",";
@@ -195,12 +199,21 @@ public class main {
 						json += "]}";
 						SendString(json, socket);
 	                }
+	                else if(reqHttp.url.equals("/dbadd"))
+	                {
+	                	String id = reqHttp.params.get("id");
+	                	if(id != null)
+	                	{
+	                		mysql.UpdateQuery("insert into product(id, name) values ("+id+", \"\");");
+	                		SendString("added new column", socket);
+	                	}
+	                }
 	                else if(reqHttp.url.equals("/dbrm"))
 	                {
 	                	String id = reqHttp.params.get("id");
 	                	if(id != null)
 	                	{
-	                		Map<String, List<String>> ret = mysql.ExecuteQuery("delete from product where id = "+id+";");
+	                		mysql.UpdateQuery("delete from product where id = "+id+";");
 	                		SendString("removed", socket);
 	                	}
 	                }

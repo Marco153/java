@@ -1,9 +1,15 @@
-window.onload = start
+window.onload = renderDb
 let IP = "http://localhost:42069"
 let db;
+let last_id;
 
-function renderDb()
+async function renderDb()
 {
+	let val = await getDataBase();
+
+
+	db = val.db;
+	last_id = -1;
 
 	let columns = Object.getOwnPropertyNames(db[0]);
 
@@ -22,6 +28,10 @@ function renderDb()
 	
 	for(let i = 0; i < db.length; i++)
 	{
+		let id = parseInt(db[i].id);
+		if(id > last_id)
+			last_id = id;
+
 		let thead = document.createElement("tr");
 		columns.forEach((value) =>{
 			let td = document.createElement("td");
@@ -49,7 +59,7 @@ function renderDb()
 		let remove_button = document.createElement("button");
 		remove_button.textContent = "x";
 		remove_button.setAttribute("dbid", db[i].id);
-		remove_button.addEventListener("click", (e)=>{
+		remove_button.addEventListener("click", async (e)=>{
 			let id = parseInt(e.target.getAttribute("dbid"));
 
 			for(let i = 0; i < db.length; i++)
@@ -58,8 +68,8 @@ function renderDb()
 					db.splice(i, 1);
 			}
 
-			renderDb();
 			const response = await fetch(`${IP}/dbrm?id=${id}`)
+			renderDb();
 
 		});
 
@@ -70,6 +80,13 @@ function renderDb()
 
 		table.appendChild(thead);
 	}
+	let add_button = document.createElement("button");
+	add_button.addEventListener("click", () =>{
+		fetch(`${IP}/dbadd?id=${last_id + 1}`)
+		renderDb();
+	})
+	add_button.textContent = "add new row";
+
 	let up_button = document.createElement("button");
 	up_button.addEventListener("click", () =>{
 		fetch(`${IP}/dbup`, 
@@ -80,6 +97,7 @@ function renderDb()
 
 	document.body.textContent = "";
 	document.body.appendChild(table);
+	document.body.appendChild(add_button);
 	document.body.appendChild(up_button);
 }
 async function start()
