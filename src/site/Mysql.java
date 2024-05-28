@@ -28,6 +28,7 @@ public class Mysql {
 		Map<String, List<String>> ret = new HashMap<String, List<String>>();
 		List<String> idColumn = new ArrayList<String>();
 		List<String> nameColumn = new ArrayList<String>();
+		List<String> imageColumn = new ArrayList<String>();
 	
 		try(Connection con = DriverManager.getConnection(url, username, password))
 		{
@@ -37,6 +38,7 @@ public class Mysql {
 			{
 				idColumn.add(Integer.toString(res.getInt("id")));
 				nameColumn.add(res.getString("name"));
+				imageColumn.add(res.getString("image"));
 			}
 		}
 		catch(SQLException e)
@@ -46,6 +48,7 @@ public class Mysql {
 		
 		ret.put("id", idColumn);
 		ret.put("name", nameColumn);
+		ret.put("image", imageColumn);
 		
 		return ret;
 	}

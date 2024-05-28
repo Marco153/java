@@ -20,6 +20,13 @@ import java.sql.*;
 
 public class main {
 	class HelloWorld {
+		public static String getFileExtension(String str) {
+			int lastIndexOf = str.lastIndexOf(".");
+			if (lastIndexOf == -1) {
+				return ""; // empty extension
+			}
+			return str.substring(lastIndexOf + 1);
+		}
 		public static void SendString(String str, Socket socket) throws IOException
 		{
 			OutputStream outputStream = socket.getOutputStream();
@@ -31,7 +38,14 @@ public class main {
 		{
 			String file = new String(Files.readAllBytes(Paths.get((fileName))));
 			OutputStream outputStream = socket.getOutputStream();
-			String httpResponse = "HTTP/1.1 200 OK\r\n\r\n"+file;
+			String ext = getFileExtension(fileName);
+			String contentType = "";
+			
+			if(ext.equals("js"))
+			{
+				contentType += "Content-Type: text/javascript\n";
+			}
+			String httpResponse = "HTTP/1.1 200 OK\r\n"+contentType+"\r\n"+file;
 
 			outputStream.write(httpResponse.getBytes("UTF-8"));
 			outputStream.close();
@@ -95,6 +109,10 @@ public class main {
 	                else if(reqHttp.url.equals("/"))
 	                {
 						SendFile("index.html", socket);
+	                }
+	                else if(reqHttp.url.equals("/index.js"))
+	                {
+						SendFile("index.js", socket);
 	                }
 	                else if(reqHttp.url.equals("/main.js"))
 	                {
@@ -162,7 +180,7 @@ public class main {
 	                }
 	                else if(reqHttp.url.equals("/dball"))
 	                {
-						Map<String, List<String>> ret = mysql.ExecuteQuery("select * from product");
+						Map<String, List<String>> ret = mysql.ExecuteQuery("select * from product;");
 						List<String> ids = ret.get("id");
 						Set<String> keySet = ret.keySet();
 						
