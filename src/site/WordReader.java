@@ -4,6 +4,36 @@ public class WordReader {
 	public String str;
 	public int curIdx;
 	
+	public String readWordHader()
+	{
+		int i = curIdx;
+
+		EatSpace();
+		if(!Character.isLetter(str.charAt(i)))
+		{
+			return String.valueOf(GetChar());
+		}
+
+		int wordStart = i;
+
+		while(i < str.length() && 
+			  (Character.isAlphabetic(str.charAt(i)) || Character.isDigit(str.charAt(i)) || str.charAt(i) == '-'))
+		{
+			i++;
+		}
+		
+		int wordEnd = i;
+		
+		curIdx = i;
+
+		
+		return str.substring(wordStart, wordEnd);
+	}
+	public String getRemaining()
+	{
+		
+		return str.substring(curIdx);
+	}
 	public String readWord()
 	{
 		int i = curIdx;

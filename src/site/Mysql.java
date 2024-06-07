@@ -23,12 +23,33 @@ public class Mysql {
 		}
 		
 	}
+	boolean RegisterUser(String user, String pw) throws SQLException
+	{
+		try(Connection con = DriverManager.getConnection(url, username, password))
+		{
+			Statement st = con.createStatement();
+			ResultSet res = st.executeQuery("select * from users where name = \"" + user + "\";");
+			if(!res.isBeforeFirst())
+			{
+				return false;
+			}
+			res = st.executeQuery("insert into users(name, pw) values(\"" + user + "\", \"" + pw + "\");");
+			return true;
+		}
+		catch(SQLException e)
+		{
+			e.printStackTrace();
+			return false;
+		}
+		
+	}
 	Map<String, List<String>> ExecuteQuery(String query) throws SQLException
 	{
 		Map<String, List<String>> ret = new HashMap<String, List<String>>();
 		List<String> idColumn = new ArrayList<String>();
 		List<String> nameColumn = new ArrayList<String>();
 		List<String> imageColumn = new ArrayList<String>();
+		List<String> priceColumn = new ArrayList<String>();
 	
 		try(Connection con = DriverManager.getConnection(url, username, password))
 		{
@@ -39,6 +60,7 @@ public class Mysql {
 				idColumn.add(Integer.toString(res.getInt("id")));
 				nameColumn.add(res.getString("name"));
 				imageColumn.add(res.getString("image"));
+				priceColumn.add(res.getString("price"));
 			}
 		}
 		catch(SQLException e)
@@ -49,6 +71,7 @@ public class Mysql {
 		ret.put("id", idColumn);
 		ret.put("name", nameColumn);
 		ret.put("image", imageColumn);
+		ret.put("price", priceColumn);
 		
 		return ret;
 	}

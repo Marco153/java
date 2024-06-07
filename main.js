@@ -1,7 +1,10 @@
+import * as common from "./common.js"
+
 window.onload = renderDb
-let IP = "http://localhost:42069"
+let IP = `http://${common.IP}:42069`
 let db;
 let last_id;
+let cur_img_edit_tarea = null;
 
 async function renderDb()
 {
@@ -16,6 +19,7 @@ async function renderDb()
 	let table = document.createElement("table")
 
 	let thead = document.createElement("tr");
+	thead.setAttribute("class", "table_head");
 	table.appendChild(thead);
 
 	columns.forEach((value) =>{
@@ -25,6 +29,11 @@ async function renderDb()
 		td.appendChild(text);
 		thead.appendChild(td);
 	})
+
+	let td = document.createElement("td");
+	let text = document.createTextNode("actions");
+	td.appendChild(text);
+	thead.appendChild(td);
 	
 	for(let i = 0; i < db.length; i++)
 	{
@@ -38,6 +47,37 @@ async function renderDb()
 			let tarea = "";
 			if(value == "id")
 				tarea = document.createTextNode(db[i][value]);
+			else if(value == "image")
+			{
+				tarea = document.createElement("img");
+				tarea.setAttribute("src", db[i][value]);
+				tarea.setAttribute("width", "100");
+				tarea.setAttribute("heigth", "100");
+
+				tarea.setAttribute("dbid", db[i].id);
+				tarea.setAttribute("dbcol", value);
+
+				tarea.addEventListener("click", (e) =>{
+					if(cur_img_edit_tarea)
+						cur_img_edit_tarea.remove();
+					let id = parseInt(e.target.getAttribute("dbid"));
+					let col = e.target.getAttribute("dbcol");
+
+					let edit_area = document.createElement("textarea");
+					edit_area.setAttribute("dbid", db[i].id);
+					edit_area.setAttribute("dbcol", value);
+					edit_area.addEventListener("input", (e)=>{
+						let id = parseInt(e.target.getAttribute("dbid"));
+						let col = e.target.getAttribute("dbcol");
+
+						db[i][col] = e.target.value;
+					});
+					edit_area.value = db[i][col];
+					e.target.parentNode.appendChild(edit_area);
+					cur_img_edit_tarea = edit_area;
+				})
+			}
+
 			else
 			{
 				tarea = document.createElement("textarea");
@@ -57,8 +97,9 @@ async function renderDb()
 		})
 		let remove = document.createElement("td");
 		let remove_button = document.createElement("button");
-		remove_button.textContent = "x";
+		remove_button.textContent = "remove";
 		remove_button.setAttribute("dbid", db[i].id);
+		remove_button.setAttribute("class", "rm_but")
 		remove_button.addEventListener("click", async (e)=>{
 			let id = parseInt(e.target.getAttribute("dbid"));
 
@@ -73,7 +114,9 @@ async function renderDb()
 
 		});
 
+
 		remove.appendChild(remove_button);
+		//thead.setAttribute("class", "table_head");
 		thead.appendChild(remove);
 
 		
@@ -81,6 +124,7 @@ async function renderDb()
 		table.appendChild(thead);
 	}
 	let add_button = document.createElement("button");
+	add_button.setAttribute("class", "add_but");
 	add_button.addEventListener("click", () =>{
 		fetch(`${IP}/dbadd?id=${last_id + 1}`)
 		renderDb();
@@ -88,6 +132,7 @@ async function renderDb()
 	add_button.textContent = "add new row";
 
 	let up_button = document.createElement("button");
+	up_button.setAttribute("class", "up_but");
 	up_button.addEventListener("click", () =>{
 		fetch(`${IP}/dbup`, 
 			{method: 'POST',
@@ -95,10 +140,16 @@ async function renderDb()
 	)})
 	up_button.textContent = "update";
 
+	let all = document.createElement("div");
+
 	document.body.textContent = "";
-	document.body.appendChild(table);
-	document.body.appendChild(add_button);
-	document.body.appendChild(up_button);
+	all.appendChild(add_button);
+	all.appendChild(up_button);
+	all.appendChild(table);
+	all.setAttribute("id", "all");
+
+	document.body.appendChild(all);
+
 }
 async function start()
 {

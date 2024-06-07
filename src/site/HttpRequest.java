@@ -9,6 +9,7 @@ public class HttpRequest {
 	public String url;
 	public String body;
 	public Map<String, String> params;
+	public Map<String, String> headers;
 	
 	public void ParseParams(WordReader reader)
 	{
@@ -37,6 +38,7 @@ public class HttpRequest {
 		BufferedReader bufReader = new BufferedReader(new StringReader(req));
 
 		params = new HashMap<String, String>();
+		headers = new HashMap<String, String>();
 		try
 		{
 			reqLine = bufReader.readLine();
@@ -70,6 +72,16 @@ public class HttpRequest {
 			reqLine = bufReader.readLine();
 			while(reqLine != null && !reqLine.isEmpty())
 			{
+				wordReader = new WordReader(reqLine);
+				
+
+				String headerName = wordReader.readWordHader();
+				// eating tho double colon
+				wordReader.curIdx++;
+
+				wordReader.EatSpace();
+				String headerVal = wordReader.getRemaining();
+				headers.put(headerName, headerVal);
 				reqLine = bufReader.readLine();
 			}
 

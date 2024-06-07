@@ -11,254 +11,454 @@ import java.util.Date;
 import java.util.Map;
 import java.util.List;
 import java.util.Set;
+import java.util.Random;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.json.JSONArray;
 
 import java.sql.*;
-	
-
 public class main {
-	class HelloWorld {
-		public static String getFileExtension(String str) {
-			int lastIndexOf = str.lastIndexOf(".");
-			if (lastIndexOf == -1) {
-				return ""; // empty extension
-			}
-			return str.substring(lastIndexOf + 1);
+
+	public static int secret;
+
+	public static String createUserRegResponse(int ok, String err ) 
+	{
+		return "{ \"ok\": " + ok+", \"info\" :\""+ err + "\"}";
+	}
+	public static String getFileExtension(String str) {
+		int lastIndexOf = str.lastIndexOf(".");
+		if (lastIndexOf == -1) {
+			return ""; // empty extension
 		}
-		public static void SendString(String str, Socket socket) throws IOException
+		return str.substring(lastIndexOf + 1);
+	}
+	public static void SendString(String str, Socket socket) throws IOException
+	{
+		OutputStream outputStream = socket.getOutputStream();
+		String httpResponse = "HTTP/1.1 200 OK\r\n\r\n"+str;
+		outputStream.write(httpResponse.getBytes("UTF-8"));
+		outputStream.close();
+	}
+	public static void SendFile(String fileName, Socket socket) throws IOException
+	{
+		String file = new String(Files.readAllBytes(Paths.get((fileName))));
+		OutputStream outputStream = socket.getOutputStream();
+		String ext = getFileExtension(fileName);
+		String contentType = "";
+		
+		if(ext.equals("png"))
 		{
-			OutputStream outputStream = socket.getOutputStream();
-			String httpResponse = "HTTP/1.1 200 OK\r\n\r\n"+str;
-			outputStream.write(httpResponse.getBytes("UTF-8"));
-			outputStream.close();
+			contentType += "Content-Type: image/png\n";
 		}
-		public static void SendFile(String fileName, Socket socket) throws IOException
+		if(ext.equals("js"))
 		{
-			String file = new String(Files.readAllBytes(Paths.get((fileName))));
-			OutputStream outputStream = socket.getOutputStream();
-			String ext = getFileExtension(fileName);
-			String contentType = "";
-			
-			if(ext.equals("js"))
+			contentType += "Content-Type: text/javascript\n";
+		}
+		String httpResponse = "HTTP/1.1 200 OK\r\n"+contentType+"\r\n"+file;
+
+		outputStream.write(httpResponse.getBytes("UTF-8"));
+		outputStream.close();
+	}
+	public static Connection con;
+	public static void main(String[] args) throws JSONException {
+		Randem rand = new Random();
+		secret = rand.nexInt(999999999);
+
+
+		String url = "jdbc:mysql://localhost:3306/products";
+		String username = "java";
+		String password = "1234";
+
+		System.out.println("Connecting database ...");
+
+		Mysql mysql = new Mysql("products", "java", "1234");
+		try
+		{
+			mysql.UpdateQuery("update product set name =\"processador\" where id = 1");
+			Map<String, List<String>> ret = mysql.ExecuteQuery("select * from product;");
+			for(String s : ret.get("name"))
 			{
-				contentType += "Content-Type: text/javascript\n";
+				System.out.println("name: " + s);
 			}
-			String httpResponse = "HTTP/1.1 200 OK\r\n"+contentType+"\r\n"+file;
-
-			outputStream.write(httpResponse.getBytes("UTF-8"));
-			outputStream.close();
 		}
-		public static Connection con;
-	    public static void main(String[] args) throws JSONException {
-	    	String url = "jdbc:mysql://localhost:3306/products";
-	    	String username = "java";
-	    	String password = "1234";
+		catch(SQLException e)
+		{
+			e.printStackTrace();
+		}
+		WebSocket ws= new WebSocket();
+		ws.start();
 
-	    	System.out.println("Connecting database ...");
+		int port = 42069;
+		try (ServerSocket serverSocket = new ServerSocket(port)) {
 
-	    	Mysql mysql = new Mysql("products", "java", "1234");
-	    	try
-	    	{
-				mysql.UpdateQuery("update product set name =\"processador\" where id = 1");
-				Map<String, List<String>> ret = mysql.ExecuteQuery("select * from product;");
-				for(String s : ret.get("name"))
+			System.out.println("Server is listening on port " + port);
+
+
+			while (true) {
+				Socket socket = serverSocket.accept();
+
+				System.out.println("New client connected");
+
+				InputStream inputStream = socket.getInputStream();
+
+				byte[] buffer = new byte[4096];
+				int bytesRead;
+				ByteArrayOutputStream byteArray = new ByteArrayOutputStream();
+
+				bytesRead = socket.getInputStream().read(buffer, 0, 4096);
+				byteArray.write(buffer, 0, bytesRead);
+
+
+				String req = byteArray.toString();
+
+				HttpRequest reqHttp = new HttpRequest(req);
+
+
+				System.out.println("req is "+req);
+
+
+				String ext = getFileExtension(reqHttp.url);
+
+				if(reqHttp.url.equals("/panel"))
 				{
-					System.out.println("name: " + s);
+					SendFile("panel.html", socket);
 				}
-	    	}
-	    	catch(SQLException e)
-	    	{
-	    		e.printStackTrace();
-	    	}
+				else if(reqHttp.url.equals("/login"))
+				{
+					SendFile("login.html", socket);
+				}
+				else if(ext.equals("js"))
+				{
+					SendFile(reqHttp.url.substring(1), socket);
+					//System.out.println("css file: " );
+				}
+				else if(ext.equals("css"))
+				{
+					SendFile(reqHttp.url.substring(1), socket);
+					//System.out.println("css file: " );
+				}
+				else if(ext.equals("jpeg"))
+				{
+					String img = "imgs/"+reqHttp.url.substring(1);
+					System.out.println("loading img: "+ img);
+					SendFile(img, socket);
+				}
+				else if(ext.equals("png"))
+				{
+					SendFile("imgs/"+reqHttp.url.substring(1), socket);
+				}
+				else if(reqHttp.url.equals("/common.js"))
+				{
+					SendFile("common.js", socket);
+				}
+				else if(reqHttp.url.equals("/chat.js"))
+				{
+					SendFile("chat.js", socket);
+				}
+				else if(reqHttp.url.equals("/send"))
+				{
+					String m = reqHttp.params.get("m");
+					ws.BroadCast(m);
 
-	    	
-	    	int port = 42069;
-	    	try (ServerSocket serverSocket = new ServerSocket(port)) {
-	    		 
-	            System.out.println("Server is listening on port " + port);
-	            
-	            
-	            while (true) {
-	                Socket socket = serverSocket.accept();
-	 
-	                System.out.println("New client connected");
-	                
-	                InputStream inputStream = socket.getInputStream();
-	                
-	                byte[] buffer = new byte[4096];
-	                int bytesRead;
-	                ByteArrayOutputStream byteArray = new ByteArrayOutputStream();
+					OutputStream outputStream = socket.getOutputStream();
+					outputStream.write(("ok").getBytes("UTF-8"));
+					outputStream.close();
 
-	                bytesRead = socket.getInputStream().read(buffer, 0, 4096);
-					byteArray.write(buffer, 0, bytesRead);
-					
+				}
+				else if(reqHttp.url.equals("/chat"))
+				{
+					SendFile("chat.html", socket);
+				}
+				else if(reqHttp.url.equals("/"))
+				{
+					SendFile("index.html", socket);
+				}
+				else if(reqHttp.url.equals("/index.js"))
+				{
+					SendFile("index.js", socket);
+				}
+				else if(reqHttp.url.equals("/main.js"))
+				{
+					SendFile("main.js", socket);
+				}
+				else if(reqHttp.url.equals("/dbup"))
+				{
+					JSONArray ar = new JSONArray(reqHttp.body);
 
-	                String req = byteArray.toString();
+					String json = "INSERT INTO product(";
+					String allColumnNames = "";
+					String queryUpdateEnd = "";
+					String values = "";
+					for(int i = 0; i < ar.length(); i++)
+					{
 
-					HttpRequest reqHttp = new HttpRequest(req);
-					
-					
-	                System.out.println("req is "+req);
-	                
-	                if(reqHttp.url.equals("/panel"))
-	                {
-						SendFile("panel.html", socket);
-	                }
-	                else if(reqHttp.url.equals("/"))
-	                {
-						SendFile("index.html", socket);
-	                }
-	                else if(reqHttp.url.equals("/index.js"))
-	                {
-						SendFile("index.js", socket);
-	                }
-	                else if(reqHttp.url.equals("/main.js"))
-	                {
-						SendFile("main.js", socket);
-	                }
-	                else if(reqHttp.url.equals("/dbup"))
-	                {
-	                	JSONArray ar = new JSONArray(reqHttp.body);
-
-	                	String json = "INSERT INTO product(";
-	                	String allColumnNames = "";
-	                	String queryUpdateEnd = "";
-	                	String values = "";
-	                	for(int i = 0; i < ar.length(); i++)
-	                	{
-
-							JSONObject obj = ar.getJSONObject(i);
-							int namesLen = obj.names().length();
-							values += "(";
-							for(int j = 0; j < namesLen; j++)
+						JSONObject obj = ar.getJSONObject(i);
+						int namesLen = obj.names().length();
+						values += "(";
+						for(int j = 0; j < namesLen; j++)
+						{
+							String columnName = obj.names().getString(j);
+							if(i == 0)
 							{
-								String columnName = obj.names().getString(j);
+								allColumnNames += columnName;
+								queryUpdateEnd += columnName + " = VALUES(" +columnName+")";
+							}
+
+							String valStr = obj.getString(columnName);
+
+							if(!valStr.isEmpty() && Character.isDigit(valStr.charAt(0)))
+							{
+								values += valStr;
+							}
+							else
+							{
+								values += "\"" + valStr + "\"";
+							}
+
+
+							if(j < (namesLen - 1))
+							{
 								if(i == 0)
 								{
-									allColumnNames += columnName;
-									queryUpdateEnd += columnName + " = VALUES(" +columnName+")";
+									allColumnNames += ", ";
+									queryUpdateEnd += ", ";
 								}
-								
-								String valStr = obj.getString(columnName);
-								
-								if(!valStr.isEmpty() && Character.isDigit(valStr.charAt(0)))
-								{
-									values += valStr;
-								}
-								else
-								{
-									values += "\"" + valStr + "\"";
-								}
-
-								
-								if(j < (namesLen - 1))
-								{
-									if(i == 0)
-									{
-										allColumnNames += ", ";
-										queryUpdateEnd += ", ";
-									}
-									values += ", ";
-								}
-							}
-							values += ")";
-							if(i < (ar.length() - 1))
-							{
 								values += ", ";
 							}
-	                	}
-						json += allColumnNames + ") VALUES"+values;
-						json += " ON DUPLICATE KEY UPDATE ";
-						json += queryUpdateEnd + ";";
-
-
-						System.out.println("update query is " + json);
-
-						mysql.UpdateQuery(json);
-	                }
-	                else if(reqHttp.url.equals("/dball"))
-	                {
-						Map<String, List<String>> ret = mysql.ExecuteQuery("select * from product;");
-						List<String> ids = ret.get("id");
-						Set<String> keySet = ret.keySet();
-						
-						
-						String json = "{\"db\":[";
-						int idsLen = ids.size();
-						int i = 0;
-						for(String curId : ids)
-						{
-							json += "{";
-							json += "\"id\" :\"" + curId +"\",";
-							int columnIdx = 0;
-							int columnLen = keySet.size();
-							for(String column : keySet)
-							{
-								if(column == "id")
-									continue;
-								List<String> columnValues = ret.get(column);
-								json += " \"" + column +"\" :\"" + columnValues.get(i) + "\"";
-								
-								if(columnIdx < (columnLen - 2))
-									json += ",";
-								json += "";
-								columnIdx++;
-								
-							}
-							//json.
-							json += "}";
-							if(i < (idsLen - 1))
-								json += ",";
-							i++;
 						}
-						
-						json += "]}";
-						SendString(json, socket);
-	                }
-	                else if(reqHttp.url.equals("/dbadd"))
-	                {
-	                	String id = reqHttp.params.get("id");
-	                	if(id != null)
-	                	{
-	                		mysql.UpdateQuery("insert into product(id, name) values ("+id+", \"\");");
-	                		SendString("added new column", socket);
-	                	}
-	                }
-	                else if(reqHttp.url.equals("/dbrm"))
-	                {
-	                	String id = reqHttp.params.get("id");
-	                	if(id != null)
-	                	{
-	                		mysql.UpdateQuery("delete from product where id = "+id+";");
-	                		SendString("removed", socket);
-	                	}
-	                }
-	                else if(reqHttp.url.equals("/dbget"))
-	                {
-	                	String name = reqHttp.params.get("name");
-	                	if(name != null)
-	                	{
-	                		Map<String, List<String>> ret = mysql.ExecuteQuery("select * from product where name = \""+name+"\";");
-	                		SendString(ret.get("id").get(0), socket);
-	                	}
-	                }
+						values += ")";
+						if(i < (ar.length() - 1))
+						{
+							values += ", ";
+						}
+					}
+					json += allColumnNames + ") VALUES"+values;
+					json += " ON DUPLICATE KEY UPDATE ";
+					json += queryUpdateEnd + ";";
+
+
+					System.out.println("update query is " + json);
+
+					mysql.UpdateQuery(json);
+				}
+				else if(reqHttp.url.equals("/dball"))
+				{
+					Map<String, List<String>> ret = mysql.ExecuteQuery("select * from product;");
+					List<String> ids = ret.get("id");
+					Set<String> keySet = ret.keySet();
+
+
+					String json = "{\"db\":[";
+					int idsLen = ids.size();
+					int i = 0;
+					for(String curId : ids)
+					{
+						json += "{";
+						json += "\"id\" :\"" + curId +"\",";
+						int columnIdx = 0;
+						int columnLen = keySet.size();
+						for(String column : keySet)
+						{
+							if(column == "id")
+							continue;
+							List<String> columnValues = ret.get(column);
+							json += " \"" + column +"\" :\"" + columnValues.get(i) + "\"";
+
+							if(columnIdx < (columnLen - 2))
+							json += ",";
+							json += "";
+							columnIdx++;
+
+						}
+						//json.
+						json += "}";
+						if(i < (idsLen - 1))
+						json += ",";
+						i++;
+					}
+
+					json += "]}";
+					SendString(json, socket);
+				}
+				else if(reqHttp.url.equals("/dbadd"))
+				{
+					String id = reqHttp.params.get("id");
+				}
+				else if(reqHttp.url.equals("/chat"))
+				{
+					SendFile("chat.html", socket);
+				}
+				else if(reqHttp.url.equals("/"))
+				{
+					SendFile("index.html", socket);
+				}
+				else if(reqHttp.url.equals("/index.js"))
+				{
+					SendFile("index.js", socket);
+				}
+				else if(reqHttp.url.equals("/main.js"))
+				{
+					SendFile("main.js", socket);
+				}
+				else if(reqHttp.url.equals("/cad"))
+				{
+
+					String user = reqHttp.params.get("u");
+					String pw = reqHttp.params.get("pw");
+
+
+					if(!mysql.RegisterUser(user, pw))
+					{
+						SendString(createUserRegResponse(0, "usuario ja cadastrado"), socket);
+					}
+					else
+					{
+						SendString(createUserRegResponse(1, ""), socket);
+					}
+				}
+				else if(reqHttp.url.equals("/user"))
+				{
+				}
+				else if(reqHttp.url.equals("/dbup"))
+				{
+					JSONArray ar = new JSONArray(reqHttp.body);
+
+					String json = "INSERT INTO product(";
+					String allColumnNames = "";
+					String queryUpdateEnd = "";
+					String values = "";
+					for(int i = 0; i < ar.length(); i++)
+					{
+
+						JSONObject obj = ar.getJSONObject(i);
+						int namesLen = obj.names().length();
+						values += "(";
+						for(int j = 0; j < namesLen; j++)
+						{
+							String columnName = obj.names().getString(j);
+							if(i == 0)
+							{
+								allColumnNames += columnName;
+								queryUpdateEnd += columnName + " = VALUES(" +columnName+")";
+							}
+
+							String valStr = obj.getString(columnName);
+
+							if(!valStr.isEmpty() && Character.isDigit(valStr.charAt(0)))
+							{
+								values += valStr;
+							}
+							else
+							{
+								values += "\"" + valStr + "\"";
+							}
+
+
+							if(j < (namesLen - 1))
+							{
+								if(i == 0)
+								{
+									allColumnNames += ", ";
+									queryUpdateEnd += ", ";
+								}
+								values += ", ";
+							}
+						}
+						values += ")";
+						if(i < (ar.length() - 1))
+						{
+							values += ", ";
+						}
+					}
+					json += allColumnNames + ") VALUES"+values;
+					json += " ON DUPLICATE KEY UPDATE ";
+					json += queryUpdateEnd + ";";
+
+
+					System.out.println("update query is " + json);
+
+					mysql.UpdateQuery(json);
+				}
+				else if(reqHttp.url.equals("/dball"))
+				{
+					Map<String, List<String>> ret = mysql.ExecuteQuery("select * from product;");
+					List<String> ids = ret.get("id");
+					Set<String> keySet = ret.keySet();
+
+
+					String json = "{\"db\":[";
+					int idsLen = ids.size();
+					int i = 0;
+					for(String curId : ids)
+					{
+						json += "{";
+						json += "\"id\" :\"" + curId +"\",";
+						int columnIdx = 0;
+						int columnLen = keySet.size();
+						for(String column : keySet)
+						{
+							if(column == "id")
+							continue;
+							List<String> columnValues = ret.get(column);
+							json += " \"" + column +"\" :\"" + columnValues.get(i) + "\"";
+
+							if(columnIdx < (columnLen - 2))
+							json += ",";
+							json += "";
+							columnIdx++;
+
+						}
+						//json.
+						json += "}";
+						if(i < (idsLen - 1))
+						json += ",";
+						i++;
+					}
+
+					json += "]}";
+					SendString(json, socket);
+				}
+				else if(reqHttp.url.equals("/dbadd"))
+				{
+					String id = reqHttp.params.get("id");
+					if(id != null)
+					{
+						mysql.UpdateQuery("insert into product(id, name) values ("+id+", \"\");");
+						SendString("added new column", socket);
+					}
+				}
+				else if(reqHttp.url.equals("/dbrm"))
+				{
+					String id = reqHttp.params.get("id");
+					if(id != null)
+					{
+						mysql.UpdateQuery("delete from product where id = "+id+";");
+					SendString("removed", socket);
+					}
+				}
+				else if(reqHttp.url.equals("/dbget"))
+				{
+					String name = reqHttp.params.get("name");
+					if(name != null)
+					{
+						Map<String, List<String>> ret = mysql.ExecuteQuery("select * from product where name = \""+name+"\";");
+					SendString(ret.get("id").get(0), socket);
+					}
+				}
 
 
 
-	                System.out.println("Client disconnected");
-	 
-	                socket.close();
-	            }
-	 
-	        } catch (IOException ex) {
-	            System.out.println("Server exception: " + ex.getMessage());
-	            ex.printStackTrace();
-	        } catch (SQLException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
+				System.out.println("Client disconnected");
+
+				socket.close();
 			}
-	    }
+
+		} catch (IOException ex) {
+			System.out.println("Server exception: " + ex.getMessage());
+			ex.printStackTrace();
+		} catch (SQLException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 	}
 }

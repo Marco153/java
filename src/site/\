@@ -1,0 +1,122 @@
+package site;
+import java.io.*;
+
+
+
+import java.net.*;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.util.Date;
+import java.util.Map;
+import java.util.List;
+import java.util.Set;
+import org.json.JSONException;
+import org.json.JSONObject;
+import org.json.JSONArray;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.Base64;
+import java.util.Scanner;
+import java.util.List;
+import java.util.ArrayList;
+
+public class WebSocket extends Thread{
+	public class Client
+	{
+		Socket s;
+	}
+	List<Client> clients = new ArrayList<Client>();
+	public void run()
+	{
+		try (ServerSocket serverSocket = new ServerSocket(42070)) {
+
+			while (true) {
+				Socket socket = serverSocket.accept();
+				InputStream in = socket.getInputStream();
+				byte[] buffer = new byte[4096];
+				int bytesRead;
+				ByteArrayOutputStream byteArray = new ByteArrayOutputStream();
+
+				bytesRead = in.read(buffer, 0, 4096);
+				byteArray.write(buffer, 0, bytesRead);
+				
+
+				String req = byteArray.toString();
+				System.out.println("new con req"+req);
+
+				HttpRequest reqHttp = new HttpRequest(req);
+
+				OutputStream out = socket.getOutputStream();
+				
+				String secKey = reqHttp.headers.get("Sec-WebSocket-Key");
+				
+				byte[] response = ("HTTP/1.1 101 Switching Protocols\r\n"
+					+ "Connection: Upgrade\r\n"
+					+ "Upgrade: websocket\r\n"
+					+ "Sec-WebSocket-Accept: "
+					+ Base64.getEncoder().encodeToString(MessageDigest.getInstance("SHA-1").digest((secKey + "258EAFA5-E914-47DA-95CA-C5AB0DC85B11").getBytes("UTF-8")))
+					+ "\r\n\r\n").getBytes("UTF-8");
+				  out.write(response, 0, response.length);
+				  out.flush();
+				//out.flush();
+				System.out.println("closing socket "+ socket.getRemoteSocketAddress().toString());
+				sendMessage(out, "hello bro");
+// Keep the connection open to listen for further messages
+				/*
+				socket.close();
+				
+				  
+				byte[] messageBytes = ("this was from server brosky").getBytes("UTF-8");
+				int messageLength = messageBytes.length;
+
+				ByteArrayOutputStream frame = new ByteArrayOutputStream();
+				frame.write(0x81); // FIN bit set and text frame opcod		  
+				
+				frame.write(messageBytes);
+				out = socket.getOutputStream();
+				out.write(frame.toByteArray());
+				out.flush();
+				System.out.println("closing socket "+ socket.toString());
+				socket.close();
+				*/
+				
+				
+			}
+		} catch (IOException e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+		} catch (NoSuchAlgorithmException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
+	private static void sendMessage(OutputStream out, String message) throws IOException {
+		byte[] messageBytes = message.getBytes("UTF-8");
+		int messageLength = messageBytes.length;
+
+		ByteArrayOutputStream frame = new ByteArrayOutputStream();
+		frame.write(0x81); // FIN bit set and text frame opcode
+
+		if (messageLength <= 125) {
+			frame.write(messageLength);
+		} else if (messageLength <= 65535) {
+			frame.write(126);
+			frame.write((messageLength >> 8) & 0xFF);
+			frame.write(messageLength & 0xFF);
+		} else {
+			frame.write(127);
+			frame.write((messageLength >> 56) & 0xFF);
+			frame.write((messageLength >> 48) & 0xFF);
+			frame.write((messageLength >> 40) & 0xFF);
+			frame.write((messageLength >> 32) & 0xFF);
+			frame.write((messageLength >> 24) & 0xFF);
+			frame.write((messageLength >> 16) & 0xFF);
+			frame.write((messageLength >> 8) & 0xFF);
+			frame.write(messageLength & 0xFF);
+		}
+
+		frame.write(messageBytes);
+		out.write(frame.toByteArray());
+		out.flush();
+	}
+}

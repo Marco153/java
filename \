@@ -46,7 +46,6 @@ textarea
 #all
 {
 	margin: auto;
-	width: 30%;
 }
 table {
   border-collapse: collapse;
