@@ -21,6 +21,10 @@ function start()
 		if(json_res.ok == 1)
 		{
 			sessionStorage.setItem("uid", json_res.info);
+
+			window.location.href = "/userpanel";
+
+			/*
 			let err   = document.getElementById("err");
 			err.textContent = json_res.info;
 			let res = await fetch(`${common.fetch_IP}/userpanel`, {
@@ -28,6 +32,9 @@ function start()
 				body: JSON.stringify({session: json_res.info})
 			})
 
+			let json = await res.json();
+			document.write(json.info);
+			*/
 
 
 		}

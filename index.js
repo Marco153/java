@@ -72,6 +72,7 @@ function insertServ(name, id)
 function start()
 {
 	common.insertHeader()
+	common.insertNewButtonInHeader("logar", "/login");
 	serv_desc = document.getElementById("col2");
 	servs = ["este e um servico de barra", "pinca sao apertos de roupas", "costuras em geral"]
 	let id = {id: 0};

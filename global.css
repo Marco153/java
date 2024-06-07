@@ -34,7 +34,7 @@
 {
 	width: 100px;
 }
-.header_class
+#header_id
 {
 	background-color: #444444;
 	position: fixed;

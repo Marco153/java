@@ -1,7 +1,7 @@
 export const IP = "localhost"
 export const fetch_IP = `http://${IP}:42069`
 
-function headerBut(name, link)
+export function headerBut(name, link)
 {
 	let ret = document.createElement("div");
 	ret.setAttribute("class", "header_class")
@@ -15,14 +15,18 @@ function headerBut(name, link)
 	return ret;
 }
 
+export function insertNewButtonInHeader(name, link)
+{
+	let h = document.getElementById("header_id");
+	h.appendChild(headerBut(name, link))
+}
 export function insertHeader()
 {
 	let h = document.createElement("div")
 
-	h.setAttribute("class", "header_class")
+	h.setAttribute("id", "header_id")
 
 	h.appendChild(headerBut("inicio", "/"));
-	h.appendChild(headerBut("logar", "/login"));
 
 	document.body.appendChild(h);
 }

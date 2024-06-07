@@ -20,13 +20,13 @@ import org.json.JSONArray;
 import java.sql.*;
 class User
 {
-	int id;
+	String id;
 	String name;
 }
 public class main {
 
 	public static int secret;
-	public static Map<Integer, User> users;
+	public static Map<String, User> users;
 
 	public static String createUserRegResponse(int ok, String err ) 
 	{
@@ -39,6 +39,13 @@ public class main {
 		}
 		return str.substring(lastIndexOf + 1);
 	}
+	public static void SendStringHeader(String str, String header, Socket socket) throws IOException
+	{
+		OutputStream outputStream = socket.getOutputStream();
+		String httpResponse = "HTTP/1.1 200 OK\r\n"+ header + "\r\n\r\n"+str;
+		outputStream.write(httpResponse.getBytes("UTF-8"));
+		outputStream.close();
+	}
 	public static void SendString(String str, Socket socket) throws IOException
 	{
 		OutputStream outputStream = socket.getOutputStream();
@@ -46,30 +53,95 @@ public class main {
 		outputStream.write(httpResponse.getBytes("UTF-8"));
 		outputStream.close();
 	}
-	public static void SendFile(String fileName, Socket socket) throws IOException
+	public static void SendFile(String fileName, Socket socket)
 	{
-		String file = new String(Files.readAllBytes(Paths.get((fileName))));
-		OutputStream outputStream = socket.getOutputStream();
-		String ext = getFileExtension(fileName);
-		String contentType = "";
-		
-		if(ext.equals("png"))
-		{
-			contentType += "Content-Type: image/png\n";
-		}
-		if(ext.equals("js"))
-		{
-			contentType += "Content-Type: text/javascript\n";
-		}
-		String httpResponse = "HTTP/1.1 200 OK\r\n"+contentType+"\r\n"+file;
 
-		outputStream.write(httpResponse.getBytes("UTF-8"));
-		outputStream.close();
+		String file = "";
+		try{
+			file = new String(Files.readAllBytes(Paths.get((fileName))));
+			OutputStream outputStream = socket.getOutputStream();
+			String ext = getFileExtension(fileName);
+			String contentType = "";
+			
+			if(ext.equals("png"))
+			{
+				contentType += "Content-Type: image/png\n";
+			}
+			if(ext.equals("js"))
+			{
+				contentType += "Content-Type: text/javascript\n";
+			}
+			String httpResponse = "HTTP/1.1 200 OK\r\n"+contentType+"\r\n"+file;
+
+			outputStream.write(httpResponse.getBytes("UTF-8"));
+			outputStream.close();
+		}
+		catch(IOException e)
+		{
+			e.printStackTrace();
+		}
 	}
 	public static Connection con;
+	public static User UserPanelPage(Socket socket, HttpRequest reqHttp)
+	{
+		String cookieVal = reqHttp.headers.get("Cookie");
+		if(cookieVal == null || cookieVal.isEmpty())
+			return null;
+
+		WordReader cookieParam = new WordReader(cookieVal);
+		Map<String, String> cookies = HttpRequest.ParseParams(cookieParam, ';');
+		String uid = cookies.get("uid");
+		System.out.println("up got uid  "+ uid);
+
+		if(uid == null || uid.isEmpty())
+			return null;
+
+		return users.get(uid);
+	}
+	public static void TestUidCookieSondPage(Socket socket, HttpRequest reqHttp, String page)
+	{
+		User user = UserPanelPage(socket, reqHttp);
+		if(user != null)
+		{
+			SendFile(page, socket);
+			System.out.println("user panel uid is " + user.id); 
+		}
+		else
+		{
+			//SendString(createUserRegResponse(0, "usuario usuario nao encontrado"), socket);
+			SendFile("denied.html", socket);
+		}
+	}
+	public static void ChatPage(Socket socket, HttpRequest reqHttp)
+	{
+		try
+		{
+			JSONObject obj = new JSONObject(reqHttp.body);
+
+			String uid = obj.getString("session");
+
+			User user = users.get(uid);
+			if(user != null)
+			{
+				System.out.println("user panel uid is " + uid); 
+				SendFile("chat.html", socket);
+			}
+			else
+			{
+				//SendString(createUserRegResponse(0, "usuario usuario nao encontrado"), socket);
+				SendFile("denied.html", socket);
+			}
+		}
+		catch(JSONException e)
+		{
+			SendFile("denied.html", socket);
+			e.printStackTrace();
+		}
+	}
+
 	public static void main(String[] args) throws JSONException {
 		Random rand = new Random();
-		users = new HashMap<Integer, User>();
+		users = new HashMap<String, User>();
 		secret = rand.nextInt(999999999);
 
 
@@ -175,7 +247,23 @@ public class main {
 				}
 				else if(reqHttp.url.equals("/chat"))
 				{
-					SendFile("chat.html", socket);
+					TestUidCookieSondPage(socket, reqHttp, "chat.html");
+					/*
+					JSONObject obj = new JSONObject(reqHttp.body);
+
+					Integer uid = Integer.parseInt(obj.getString("session"));
+
+					User user = users.get(uid);
+					if(user != null)
+					{
+						System.out.println("chat uid is " + uid); 
+						SendFile("chat.html", socket);
+					}
+					else
+					{
+						SendFile("denied.html", socket);
+					}
+					*/
 				}
 				else if(reqHttp.url.equals("/"))
 				{
@@ -292,10 +380,6 @@ public class main {
 				{
 					String id = reqHttp.params.get("id");
 				}
-				else if(reqHttp.url.equals("/chat"))
-				{
-					SendFile("chat.html", socket);
-				}
 				else if(reqHttp.url.equals("/"))
 				{
 					SendFile("index.html", socket);
@@ -308,13 +392,13 @@ public class main {
 				{
 					SendFile("main.js", socket);
 				}
+				else if(reqHttp.url.equals("/userinfo"))
+				{
+				}
 				else if(reqHttp.url.equals("/userpanel"))
 				{
-					JSONObject obj = new JSONObject(reqHttp.body);
-
-					Integer i = Integer.parseInt(obj.getString("session"));
-					System.out.println("user panel uid is " + i + " and its name is " + users.get(i).name);
-
+					System.out.println("headers is "+ reqHttp.headers);
+					TestUidCookieSondPage(socket, reqHttp, "user.html");
 				}
 				else if(reqHttp.url.equals("/auth"))
 				{
@@ -333,9 +417,9 @@ public class main {
 						int uid = rand.nextInt(999999999);
 						User u = new User();
 						u.name = user;
-						u.id = uid;
-						users.put(uid, u);
-						SendString(createUserRegResponse(1, Integer.toString(uid)), socket);
+						u.id = Integer.toString(uid);
+						users.put(u.id, u);
+						SendStringHeader(createUserRegResponse(1, u.id), "Set-Cookie: uid="+u.id+";", socket);
 					}
 				}
 				else if(reqHttp.url.equals("/cad"))

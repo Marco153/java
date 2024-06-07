@@ -11,8 +11,9 @@ public class HttpRequest {
 	public Map<String, String> params;
 	public Map<String, String> headers;
 	
-	public void ParseParams(WordReader reader)
+	public static Map<String, String> ParseParams(WordReader reader, char delimiter)
 	{
+		Map<String, String> ret = new HashMap<String, String>();
 		reader.EatSpace();
 		boolean firstTime = true;
 		while(true)
@@ -21,11 +22,11 @@ public class HttpRequest {
 			reader.EatSpace();
 			System.out.println("got param "+ paramName);
 
-			if(reader.CurChar() != '=')
+			if(reader.isDone() || reader.CurChar() != '=')
 			{
 				System.out.println("param ret is "+ reader.CurChar());
-				System.out.println("param reqLine "+ reqLine);
-				return;
+				//System.out.println("param reqLine "+ reqLine);
+				return ret;
 			}
 			
 			reader.GetChar();
@@ -34,12 +35,12 @@ public class HttpRequest {
 
 			System.out.println("got param val "+ paramValue);
 			reader.EatSpace();
-			params.put(paramName, paramValue);
+			ret.put(paramName, paramValue);
 
 			firstTime = false;
 			//System.out.println("param before loop end char"+ reader.CurChar());
 
-			if(reader.CurChar() == '&')
+			if(!reader.isDone() && reader.CurChar() == delimiter)
 			{
 				//System.out.println("it was & "+ reader.CurChar());
 				reader.GetChar();
@@ -50,14 +51,16 @@ public class HttpRequest {
 			//System.out.println("didnt break ");
 
 		}
-
+	
+		return ret;
 	}
 	public HttpRequest(String req)
 	{
-		BufferedReader bufReader = new BufferedReader(new StringReader(req));
-
 		params = new HashMap<String, String>();
 		headers = new HashMap<String, String>();
+
+		BufferedReader bufReader = new BufferedReader(new StringReader(req));
+
 		try
 		{
 			reqLine = bufReader.readLine();
@@ -85,7 +88,7 @@ public class HttpRequest {
 			if(wordReader.CurChar() == '?')
 			{
 				wordReader.GetChar();
-				ParseParams(wordReader);
+				params = ParseParams(wordReader, '&');
 			}
 			
 			reqLine = bufReader.readLine();

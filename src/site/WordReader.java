@@ -29,6 +29,10 @@ public class WordReader {
 		
 		return str.substring(wordStart, wordEnd);
 	}
+	public boolean isDone()
+	{
+		return curIdx >= str.length();
+	}
 	public String getRemaining()
 	{
 		
