@@ -39,7 +39,7 @@ public class WordReader {
 		int i = curIdx;
 
 		EatSpace();
-		if(!Character.isLetter(str.charAt(i)))
+		if(!Character.isLetter(str.charAt(i)) && !Character.isDigit(str.charAt(i)))
 		{
 			return String.valueOf(GetChar());
 		}

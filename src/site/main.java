@@ -9,6 +9,7 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.Date;
 import java.util.Map;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Set;
 import java.util.Random;
@@ -17,9 +18,15 @@ import org.json.JSONObject;
 import org.json.JSONArray;
 
 import java.sql.*;
+class User
+{
+	int id;
+	String name;
+}
 public class main {
 
 	public static int secret;
+	public static Map<Integer, User> users;
 
 	public static String createUserRegResponse(int ok, String err ) 
 	{
@@ -61,8 +68,9 @@ public class main {
 	}
 	public static Connection con;
 	public static void main(String[] args) throws JSONException {
-		Randem rand = new Random();
-		secret = rand.nexInt(999999999);
+		Random rand = new Random();
+		users = new HashMap<Integer, User>();
+		secret = rand.nextInt(999999999);
 
 
 		String url = "jdbc:mysql://localhost:3306/products";
@@ -97,7 +105,7 @@ public class main {
 			while (true) {
 				Socket socket = serverSocket.accept();
 
-				System.out.println("New client connected");
+				//System.out.println("New client connected");
 
 				InputStream inputStream = socket.getInputStream();
 
@@ -114,7 +122,7 @@ public class main {
 				HttpRequest reqHttp = new HttpRequest(req);
 
 
-				System.out.println("req is "+req);
+				//System.out.println("req is "+req);
 
 
 				String ext = getFileExtension(reqHttp.url);
@@ -300,20 +308,54 @@ public class main {
 				{
 					SendFile("main.js", socket);
 				}
+				else if(reqHttp.url.equals("/userpanel"))
+				{
+					JSONObject obj = new JSONObject(reqHttp.body);
+
+					Integer i = Integer.parseInt(obj.getString("session"));
+					System.out.println("user panel uid is " + i + " and its name is " + users.get(i).name);
+
+				}
+				else if(reqHttp.url.equals("/auth"))
+				{
+					String user = reqHttp.params.get("u");
+					String pw = reqHttp.params.get("pw");
+
+					if(!mysql.LoginUser(user, pw))
+					{
+						System.out.println("usuario ou senha nao batem");
+						SendString(createUserRegResponse(0, "usuario ou senha nao batem"), socket);
+					}
+					else
+					{
+						System.out.println("logando usuario");
+
+						int uid = rand.nextInt(999999999);
+						User u = new User();
+						u.name = user;
+						u.id = uid;
+						users.put(uid, u);
+						SendString(createUserRegResponse(1, Integer.toString(uid)), socket);
+					}
+				}
 				else if(reqHttp.url.equals("/cad"))
 				{
 
 					String user = reqHttp.params.get("u");
 					String pw = reqHttp.params.get("pw");
+					System.out.println("user pw is "+ pw);
+					System.out.println("reqHttp is "+ reqHttp.params);
 
 
 					if(!mysql.RegisterUser(user, pw))
 					{
+						System.out.println("usuario cadastrado");
 						SendString(createUserRegResponse(0, "usuario ja cadastrado"), socket);
 					}
 					else
 					{
-						SendString(createUserRegResponse(1, ""), socket);
+						System.out.println("criando usuario");
+						SendString(createUserRegResponse(1, "cadastrado com sucesso"), socket);
 					}
 				}
 				else if(reqHttp.url.equals("/user"))
@@ -448,7 +490,7 @@ public class main {
 
 
 
-				System.out.println("Client disconnected");
+				//System.out.println("Client disconnected");
 
 				socket.close();
 			}

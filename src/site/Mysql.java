@@ -23,17 +23,38 @@ public class Mysql {
 		}
 		
 	}
+	boolean LoginUser(String user, String pw) throws SQLException
+	{
+		try(Connection con = DriverManager.getConnection(url, username, password))
+		{
+			Statement st = con.createStatement();
+			ResultSet res = st.executeQuery("select * from users where name = \"" + user + "\" and pw = \""+ pw + "\";");
+			if(!res.next())
+			{
+				return false;
+			}
+			return true;
+		}
+		catch(SQLException e)
+		{
+			e.printStackTrace();
+			return false;
+		}
+	}
 	boolean RegisterUser(String user, String pw) throws SQLException
 	{
 		try(Connection con = DriverManager.getConnection(url, username, password))
 		{
 			Statement st = con.createStatement();
 			ResultSet res = st.executeQuery("select * from users where name = \"" + user + "\";");
-			if(!res.isBeforeFirst())
+
+			if(res.next())
 			{
 				return false;
 			}
-			res = st.executeQuery("insert into users(name, pw) values(\"" + user + "\", \"" + pw + "\");");
+			String q = "insert into users(name, pw) values(\"" + user + "\", \"" + pw + "\");";
+			System.out.println("cad q is "+ q);
+			st.executeUpdate(q);
 			return true;
 		}
 		catch(SQLException e)

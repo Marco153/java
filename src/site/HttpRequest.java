@@ -15,23 +15,42 @@ public class HttpRequest {
 	{
 		reader.EatSpace();
 		boolean firstTime = true;
-		while(firstTime || reader.CurChar() == '&')
+		while(true)
 		{
 			String paramName = reader.readWord();
 			reader.EatSpace();
+			System.out.println("got param "+ paramName);
 
 			if(reader.CurChar() != '=')
+			{
+				System.out.println("param ret is "+ reader.CurChar());
+				System.out.println("param reqLine "+ reqLine);
 				return;
+			}
 			
 			reader.GetChar();
 
 			String paramValue = reader.readWord();
 
+			System.out.println("got param val "+ paramValue);
 			reader.EatSpace();
 			params.put(paramName, paramValue);
 
 			firstTime = false;
+			//System.out.println("param before loop end char"+ reader.CurChar());
+
+			if(reader.CurChar() == '&')
+			{
+				//System.out.println("it was & "+ reader.CurChar());
+				reader.GetChar();
+				//System.out.println("it was & after "+ reader.CurChar());
+			}
+			else
+				break;
+			//System.out.println("didnt break ");
+
 		}
+
 	}
 	public HttpRequest(String req)
 	{
