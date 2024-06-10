@@ -27,6 +27,32 @@ public class WebSocket extends Thread{
 		int clienId;
 	}
 	public List<Client> clients = new ArrayList<Client>();
+	//public atic Map<String, User> users;
+	public void SendMessageTo(String message, String userName, Map<String, User> users)
+	{
+		for (Map.Entry<String, User> pair : users.entrySet())
+		{
+			User c = pair.getValue();
+			System.out.println("iterating "+c.name +" and target is "+userName);
+			if(c.name.equals(userName) && c.socket != null)
+			{
+				System.out.println("found "+c.name);
+				try
+				{
+					OutputStream out = c.socket.getOutputStream();
+					WebSocket.sendMessage(out, message);
+				} catch (IOException ex) {
+					System.out.println("Server exception: " + ex.getMessage());
+					ex.printStackTrace();
+				}
+				break;
+			}
+		}
+		for(int i = 0; i < users.size(); i++)
+		{
+			Client c = clients.get(i);
+		}
+	}
 	public void BroadCast(String str)
 	{
 		System.out.println("total clients is " + clients.size());
@@ -45,7 +71,16 @@ public class WebSocket extends Thread{
 	}
 	public void run()
 	{
-		try (ServerSocket serverSocket = new ServerSocket(42070)) {
+		InetAddress addr = null;
+		try
+		{
+			addr = InetAddress.getByName(main.IP);
+		}
+		catch(UnknownHostException e)
+		{
+			e.printStackTrace();
+		}
+		try (ServerSocket serverSocket = new ServerSocket(main.port + 1, 51, addr)) {
 
 			while (true) {
 				Socket socket = serverSocket.accept();
@@ -63,13 +98,24 @@ public class WebSocket extends Thread{
 				
 
 				String req = byteArray.toString();
-				System.out.println("new con req"+req);
+				System.out.println("******msg in ws: "+ req);
+				//System.out.println("new con req"+req);
 
 				HttpRequest reqHttp = new HttpRequest(req);
 
 				OutputStream out = socket.getOutputStream();
 				
+				User u = main.GetUserFromCookie(socket, reqHttp);
+				if(u == null)
+				{
+					socket.close();
+					break;
+				}
+
+				u.socket = socket;
+
 				String secKey = reqHttp.headers.get("Sec-WebSocket-Key");
+
 				
 				byte[] response = ("HTTP/1.1 101 Switching Protocols\r\n"
 					+ "Connection: Upgrade\r\n"
@@ -80,7 +126,7 @@ public class WebSocket extends Thread{
 				  out.write(response, 0, response.length);
 				  out.flush();
 				//out.flush();
-				System.out.println("address: "+ socket.getRemoteSocketAddress().toString());
+				//System.out.println("address: "+ socket.getRemoteSocketAddress().toString());
 				//sendMessage(out, "hello bro");
 				
 				

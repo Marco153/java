@@ -7,6 +7,7 @@ import java.io.*;
 import java.net.*;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.Base64;
 import java.util.Date;
 import java.util.Map;
 import java.util.HashMap;
@@ -18,16 +19,128 @@ import org.json.JSONObject;
 import org.json.JSONArray;
 
 import java.sql.*;
-class User
-{
-	String id;
-	String name;
-}
 public class main {
 
 	public static int secret;
+	public static String IP;
+	public static int port;
+	public static String productTableSchema;
+	public static Map<String, String> tablesSchemas;
+
 	public static Map<String, User> users;
 
+	public static void DbUpLogic(HttpRequest reqHttp, Mysql mysql, Socket socket) throws SQLException, JSONException
+	{
+		String tb = reqHttp.params.get("tb");
+		if(tb == null)
+			return;
+
+		JSONArray ar = new JSONArray(reqHttp.body);
+
+		String json = "INSERT INTO "+ tb +"(";
+		String allColumnNames = "";
+		String queryUpdateEnd = "";
+		String values = "";
+		for(int i = 0; i < ar.length(); i++)
+		{
+
+			JSONObject obj = ar.getJSONObject(i);
+			int namesLen = obj.names().length();
+			values += "(";
+			for(int j = 0; j < namesLen; j++)
+			{
+				String columnName = obj.names().getString(j);
+				if(i == 0)
+				{
+					allColumnNames += columnName;
+					queryUpdateEnd += columnName + " = VALUES(" +columnName+")";
+				}
+
+				String valStr = obj.getString(columnName);
+
+				if(!valStr.isEmpty() && Character.isDigit(valStr.charAt(0)))
+				{
+					values += valStr;
+				}
+				else
+				{
+					values += "\"" + valStr + "\"";
+				}
+
+
+				if(j < (namesLen - 1))
+				{
+					if(i == 0)
+					{
+						allColumnNames += ", ";
+						queryUpdateEnd += ", ";
+					}
+					values += ", ";
+				}
+			}
+			values += ")";
+			if(i < (ar.length() - 1))
+			{
+				values += ", ";
+			}
+		}
+		json += allColumnNames + ") VALUES"+values;
+		json += " ON DUPLICATE KEY UPDATE ";
+		json += queryUpdateEnd + ";";
+
+
+		System.out.println("update query is " + json);
+
+		mysql.UpdateQuery(json);
+	}
+	public static String DbAllLogic(HttpRequest reqHttp, Mysql mysql, Socket socket, String query) throws SQLException
+	{
+		String tb = reqHttp.params.get("tb");
+		if(tb == null)
+			return createUserRegResponse(0, "error");
+
+		
+		query = query.replace("NAME_HERE", tb);
+
+		Map<String, List<String>> ret = mysql.ExecuteQuery(query);
+		System.out.println("map is " + ret);
+		List<String> ids = ret.get("id");
+		Set<String> keySet = ret.keySet();
+
+
+		String json = "{\"ok\" : 1, \"db\":[";
+		int idsLen = ids.size();
+		int i = 0;
+		for(String curId : ids)
+		{
+			json += "{";
+			json += "\"id\" :\"" + curId +"\",";
+			int columnIdx = 0;
+			int columnLen = keySet.size();
+			for(String column : keySet)
+			{
+				//System.out.println("cur column is " + column);
+				if(column.equals("id"))
+					continue;
+				List<String> columnValues = ret.get(column);
+				json += " \"" + column +"\" :\"" + columnValues.get(i) + "\"";
+
+				if(columnIdx < (columnLen - 2))
+				json += ",";
+				json += "";
+				columnIdx++;
+
+			}
+			//json.
+			json += "}";
+			if(i < (idsLen - 1))
+				json += ",";
+			i++;
+		}
+
+		json += "]}";
+		return json;
+	}
 	public static String createUserRegResponse(int ok, String err ) 
 	{
 		return "{ \"ok\": " + ok+", \"info\" :\""+ err + "\"}";
@@ -63,10 +176,19 @@ public class main {
 			String ext = getFileExtension(fileName);
 			String contentType = "";
 			
-			if(ext.equals("png"))
+			if(ext.equals("png") || ext.equals("jpeg"))
 			{
-				contentType += "Content-Type: image/png\n";
-			}
+				contentType += "Content-Type: text/json\n";
+				byte[] fileContent = Files.readAllBytes(Paths.get((fileName)));
+				String encodedString = "data:image/"+ext+";base64, " + Base64.getEncoder().encodeToString(fileContent);
+
+				String httpResponse = "HTTP/1.1 200 OK\r\n"+contentType+"\r\n"+encodedString;
+				//System.out.println("png img is " + httpResponse);
+
+				outputStream.write(httpResponse.getBytes("UTF-8"));
+				outputStream.close();
+				return;
+	}
 			if(ext.equals("js"))
 			{
 				contentType += "Content-Type: text/javascript\n";
@@ -82,7 +204,7 @@ public class main {
 		}
 	}
 	public static Connection con;
-	public static User UserPanelPage(Socket socket, HttpRequest reqHttp)
+	public static User GetUserFromCookie(Socket socket, HttpRequest reqHttp)
 	{
 		String cookieVal = reqHttp.headers.get("Cookie");
 		if(cookieVal == null || cookieVal.isEmpty())
@@ -100,7 +222,7 @@ public class main {
 	}
 	public static void TestUidCookieSondPage(Socket socket, HttpRequest reqHttp, String page)
 	{
-		User user = UserPanelPage(socket, reqHttp);
+		User user = GetUserFromCookie(socket, reqHttp);
 		if(user != null)
 		{
 			SendFile(page, socket);
@@ -140,10 +262,16 @@ public class main {
 	}
 
 	public static void main(String[] args) throws JSONException {
+		IP = "192.168.159.131";
+		port = 42069;
 		Random rand = new Random();
 		users = new HashMap<String, User>();
+		tablesSchemas = new HashMap<String, String>();
+
 		secret = rand.nextInt(999999999);
 
+		tablesSchemas.put("product", "select * from product;");
+		tablesSchemas.put("promos", "select * from promos");
 
 		String url = "jdbc:mysql://localhost:3306/products";
 		String username = "java";
@@ -152,26 +280,28 @@ public class main {
 		System.out.println("Connecting database ...");
 
 		Mysql mysql = new Mysql("products", "java", "1234");
+		InetAddress addr = null;
 		try
 		{
 			mysql.UpdateQuery("update product set name =\"processador\" where id = 1");
-			Map<String, List<String>> ret = mysql.ExecuteQuery("select * from product;");
+			Map<String, List<String>> ret = mysql.ExecuteQuery(tablesSchemas.get("product"));
 			for(String s : ret.get("name"))
 			{
 				System.out.println("name: " + s);
 			}
+			addr = InetAddress.getByName(IP);
 		}
-		catch(SQLException e)
+		catch(SQLException | UnknownHostException e)
 		{
 			e.printStackTrace();
 		}
 		WebSocket ws= new WebSocket();
 		ws.start();
 
-		int port = 42069;
-		try (ServerSocket serverSocket = new ServerSocket(port)) {
+		try (ServerSocket serverSocket = new ServerSocket(port, 50, addr)) {
 
 			System.out.println("Server is listening on port " + port);
+			 //System.out.println("Working Directory = " + System.getProperty("user.dir"));
 
 
 			while (true) {
@@ -185,7 +315,7 @@ public class main {
 				int bytesRead;
 				ByteArrayOutputStream byteArray = new ByteArrayOutputStream();
 
-				bytesRead = socket.getInputStream().read(buffer, 0, 4096);
+				bytesRead = socket.getInputStream().read(buffer, 0, 4095);
 				byteArray.write(buffer, 0, bytesRead);
 
 
@@ -201,7 +331,7 @@ public class main {
 
 				if(reqHttp.url.equals("/panel"))
 				{
-					SendFile("panel.html", socket);
+					TestUidCookieSondPage(socket, reqHttp, "panel.html");
 				}
 				else if(reqHttp.url.equals("/login"))
 				{
@@ -225,7 +355,10 @@ public class main {
 				}
 				else if(ext.equals("png"))
 				{
-					SendFile("imgs/"+reqHttp.url.substring(1), socket);
+					int lastIndexOf = reqHttp.url.lastIndexOf(".");
+
+					//String fileName = fileName.substring(0, lastIndexOf);
+					SendFile("imgs/"+reqHttp.url, socket);
 				}
 				else if(reqHttp.url.equals("/common.js"))
 				{
@@ -237,8 +370,13 @@ public class main {
 				}
 				else if(reqHttp.url.equals("/send"))
 				{
-					String m = reqHttp.params.get("m");
-					ws.BroadCast(m);
+					String userName = reqHttp.params.get("to");
+					String message = reqHttp.body;
+
+
+					System.out.println("to  "+ userName + ", message " + message);
+
+					ws.SendMessageTo(message, userName, users);
 
 					OutputStream outputStream = socket.getOutputStream();
 					outputStream.write(("ok").getBytes("UTF-8"));
@@ -279,106 +417,19 @@ public class main {
 				}
 				else if(reqHttp.url.equals("/dbup"))
 				{
-					JSONArray ar = new JSONArray(reqHttp.body);
+					DbUpLogic(reqHttp, mysql, socket);
+				}
+				else if(reqHttp.url.equals("/dbpromo"))
+				{
+					String val = DbAllLogic(reqHttp, mysql, socket, 
+					"select product.id, product.name, product.image, product.price, promos.new_price from product inner join promos on promos.pid = product.id;");
 
-					String json = "INSERT INTO product(";
-					String allColumnNames = "";
-					String queryUpdateEnd = "";
-					String values = "";
-					for(int i = 0; i < ar.length(); i++)
-					{
-
-						JSONObject obj = ar.getJSONObject(i);
-						int namesLen = obj.names().length();
-						values += "(";
-						for(int j = 0; j < namesLen; j++)
-						{
-							String columnName = obj.names().getString(j);
-							if(i == 0)
-							{
-								allColumnNames += columnName;
-								queryUpdateEnd += columnName + " = VALUES(" +columnName+")";
-							}
-
-							String valStr = obj.getString(columnName);
-
-							if(!valStr.isEmpty() && Character.isDigit(valStr.charAt(0)))
-							{
-								values += valStr;
-							}
-							else
-							{
-								values += "\"" + valStr + "\"";
-							}
-
-
-							if(j < (namesLen - 1))
-							{
-								if(i == 0)
-								{
-									allColumnNames += ", ";
-									queryUpdateEnd += ", ";
-								}
-								values += ", ";
-							}
-						}
-						values += ")";
-						if(i < (ar.length() - 1))
-						{
-							values += ", ";
-						}
-					}
-					json += allColumnNames + ") VALUES"+values;
-					json += " ON DUPLICATE KEY UPDATE ";
-					json += queryUpdateEnd + ";";
-
-
-					System.out.println("update query is " + json);
-
-					mysql.UpdateQuery(json);
+					SendString(val, socket);
 				}
 				else if(reqHttp.url.equals("/dball"))
 				{
-					Map<String, List<String>> ret = mysql.ExecuteQuery("select * from product;");
-					List<String> ids = ret.get("id");
-					Set<String> keySet = ret.keySet();
-
-
-					String json = "{\"db\":[";
-					int idsLen = ids.size();
-					int i = 0;
-					for(String curId : ids)
-					{
-						json += "{";
-						json += "\"id\" :\"" + curId +"\",";
-						int columnIdx = 0;
-						int columnLen = keySet.size();
-						for(String column : keySet)
-						{
-							if(column == "id")
-							continue;
-							List<String> columnValues = ret.get(column);
-							json += " \"" + column +"\" :\"" + columnValues.get(i) + "\"";
-
-							if(columnIdx < (columnLen - 2))
-							json += ",";
-							json += "";
-							columnIdx++;
-
-						}
-						//json.
-						json += "}";
-						if(i < (idsLen - 1))
-						json += ",";
-						i++;
-					}
-
-					json += "]}";
-					SendString(json, socket);
-				}
-				else if(reqHttp.url.equals("/dbadd"))
-				{
-					String id = reqHttp.params.get("id");
+					String val = DbAllLogic(reqHttp, mysql, socket, "select * from NAME_HERE;");
+					SendString(val, socket);
 				}
 				else if(reqHttp.url.equals("/"))
 				{
@@ -392,13 +443,31 @@ public class main {
 				{
 					SendFile("main.js", socket);
 				}
-				else if(reqHttp.url.equals("/userinfo"))
+				else if(reqHttp.url.equals("/usersinfo"))
 				{
+					// TODO: ensure user has permissions to see the database
+					
+					SendString(DbAllLogic(reqHttp, mysql, socket, "select name, id from users;"), socket);
 				}
 				else if(reqHttp.url.equals("/userpanel"))
 				{
 					System.out.println("headers is "+ reqHttp.headers);
-					TestUidCookieSondPage(socket, reqHttp, "user.html");
+					User user = GetUserFromCookie(socket, reqHttp);
+					if(user != null)
+					{
+						if(user.name.equals("adm"))
+						{
+							SendFile("admpanel.html", socket);
+						}
+						else
+						{
+							SendFile("user.html", socket);
+						}
+					}
+					else
+					{
+						SendFile("denied.html", socket);
+					}
 				}
 				else if(reqHttp.url.equals("/auth"))
 				{
@@ -445,120 +514,25 @@ public class main {
 				else if(reqHttp.url.equals("/user"))
 				{
 				}
-				else if(reqHttp.url.equals("/dbup"))
-				{
-					JSONArray ar = new JSONArray(reqHttp.body);
-
-					String json = "INSERT INTO product(";
-					String allColumnNames = "";
-					String queryUpdateEnd = "";
-					String values = "";
-					for(int i = 0; i < ar.length(); i++)
-					{
-
-						JSONObject obj = ar.getJSONObject(i);
-						int namesLen = obj.names().length();
-						values += "(";
-						for(int j = 0; j < namesLen; j++)
-						{
-							String columnName = obj.names().getString(j);
-							if(i == 0)
-							{
-								allColumnNames += columnName;
-								queryUpdateEnd += columnName + " = VALUES(" +columnName+")";
-							}
-
-							String valStr = obj.getString(columnName);
-
-							if(!valStr.isEmpty() && Character.isDigit(valStr.charAt(0)))
-							{
-								values += valStr;
-							}
-							else
-							{
-								values += "\"" + valStr + "\"";
-							}
-
-
-							if(j < (namesLen - 1))
-							{
-								if(i == 0)
-								{
-									allColumnNames += ", ";
-									queryUpdateEnd += ", ";
-								}
-								values += ", ";
-							}
-						}
-						values += ")";
-						if(i < (ar.length() - 1))
-						{
-							values += ", ";
-						}
-					}
-					json += allColumnNames + ") VALUES"+values;
-					json += " ON DUPLICATE KEY UPDATE ";
-					json += queryUpdateEnd + ";";
-
-
-					System.out.println("update query is " + json);
-
-					mysql.UpdateQuery(json);
-				}
-				else if(reqHttp.url.equals("/dball"))
-				{
-					Map<String, List<String>> ret = mysql.ExecuteQuery("select * from product;");
-					List<String> ids = ret.get("id");
-					Set<String> keySet = ret.keySet();
-
-
-					String json = "{\"db\":[";
-					int idsLen = ids.size();
-					int i = 0;
-					for(String curId : ids)
-					{
-						json += "{";
-						json += "\"id\" :\"" + curId +"\",";
-						int columnIdx = 0;
-						int columnLen = keySet.size();
-						for(String column : keySet)
-						{
-							if(column == "id")
-							continue;
-							List<String> columnValues = ret.get(column);
-							json += " \"" + column +"\" :\"" + columnValues.get(i) + "\"";
-
-							if(columnIdx < (columnLen - 2))
-							json += ",";
-							json += "";
-							columnIdx++;
-
-						}
-						//json.
-						json += "}";
-						if(i < (idsLen - 1))
-						json += ",";
-						i++;
-					}
-
-					json += "]}";
-					SendString(json, socket);
-				}
 				else if(reqHttp.url.equals("/dbadd"))
 				{
 					String id = reqHttp.params.get("id");
-					if(id != null)
+					String tb = reqHttp.params.get("tb");
+					System.out.println("got id "+ id + " tb "+tb);
+					if(id != null && tb != null)
 					{
-						mysql.UpdateQuery("insert into product(id, name) values ("+id+", \"\");");
+
+						mysql.UpdateQuery("insert into " + tb +"(id) values ("+id+");");
 						SendString("added new column", socket);
 					}
 				}
 				else if(reqHttp.url.equals("/dbrm"))
 				{
 					String id = reqHttp.params.get("id");
-					if(id != null)
+					String tb = reqHttp.params.get("tb");
+					if(id != null && tb != null)
 					{
-						mysql.UpdateQuery("delete from product where id = "+id+";");
+						mysql.UpdateQuery("delete from "+tb +" where id = "+id+";");
 					SendString("removed", socket);
 					}
 				}
@@ -567,8 +541,8 @@ public class main {
 					String name = reqHttp.params.get("name");
 					if(name != null)
 					{
-						Map<String, List<String>> ret = mysql.ExecuteQuery("select * from product where name = \""+name+"\";");
-					SendString(ret.get("id").get(0), socket);
+						//Map<String, List<String>> ret = mysql.ExecuteQuery(productTableSchema);
+					//SendString(ret.get("id").get(0), socket);
 					}
 				}
 

@@ -12,20 +12,27 @@ table {
   font-size: 0.8rem;
   letter-spacing: 1px;
 }
+body
+{
+	background-color: #69a5a4;
+}
 </style>
 	<head>
 		<script	type="module" src="login.js" defer></script>
 		<link rel="stylesheet" href="./global.css">
 	</head>
 	<body>
-		<div class="page">
+		<div style="position: relative; top: 100px; margin: auto; width: 40%; display: flex; flex-direction: column; background-color: #666666; padding: 10px; border-radius: 10px;">
 			<label>Usuario</label>
 			<input type="text" id="name"/>
 			<label>Senha</label>
-			<input type="text" id="pw"/>
-			<button id="login">login</button>
-			<button id="cad">cadastrar</button>
+			<input type="password" id="pw"/>
+			<div>
+				<button id="login">login</button>
+				<button id="cad">cadastrar</button>
+			</div>
 			<div id="err"></div>
+
 		</div>
 
 	</body>

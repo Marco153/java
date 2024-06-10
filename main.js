@@ -1,17 +1,17 @@
 import * as common from "./common.js"
 
-window.onload = renderDb
+let db_doms = [];
+window.onload = start
 let IP = `http://${common.IP}:42069`
-let db;
 let last_id;
 let cur_img_edit_tarea = null;
 
-async function renderDb()
+let main_db_dom;
+let promos_db_dom;
+
+async function renderDb(db_orig, dom_idx)
 {
-	let val = await getDataBase();
-
-
-	db = val.db;
+	let db = db_orig.db;
 	last_id = -1;
 
 	let columns = Object.getOwnPropertyNames(db[0]);
@@ -42,17 +42,16 @@ async function renderDb()
 			last_id = id;
 
 		let thead = document.createElement("tr");
-		columns.forEach((value) =>{
+		//columns.forEach((value) =>{
+		for(const value of columns)
+		{
 			let td = document.createElement("td");
 			let tarea = "";
 			if(value == "id")
 				tarea = document.createTextNode(db[i][value]);
 			else if(value == "image")
 			{
-				tarea = document.createElement("img");
-				tarea.setAttribute("src", db[i][value]);
-				tarea.setAttribute("width", "100");
-				tarea.setAttribute("heigth", "100");
+				tarea = await common.createImgEl(db[i][value], 100, 100)
 
 				tarea.setAttribute("dbid", db[i].id);
 				tarea.setAttribute("dbcol", value);
@@ -94,7 +93,8 @@ async function renderDb()
 
 			td.appendChild(tarea);
 			thead.appendChild(td);
-		})
+		}
+
 		let remove = document.createElement("td");
 		let remove_button = document.createElement("button");
 		remove_button.textContent = "remove";
@@ -102,6 +102,7 @@ async function renderDb()
 		remove_button.setAttribute("class", "rm_but")
 		remove_button.addEventListener("click", async (e)=>{
 			let id = parseInt(e.target.getAttribute("dbid"));
+			let d = db_orig;
 
 			for(let i = 0; i < db.length; i++)
 			{
@@ -109,10 +110,13 @@ async function renderDb()
 					db.splice(i, 1);
 			}
 
-			const response = await fetch(`${IP}/dbrm?id=${id}`)
-			renderDb();
+			const response = await fetch(`${IP}/dbrm?id=${id}&tb=${d.name}`)
+			let val = await getDataBase(d.name)
+			let which_db_id = parseInt(e.target.getAttribute("which_db_id"));
+			renderDb(val, which_db_id);
 
 		});
+		remove_button.setAttribute("which_db_id", dom_idx);
 
 
 		remove.appendChild(remove_button);
@@ -125,16 +129,22 @@ async function renderDb()
 	}
 	let add_button = document.createElement("button");
 	add_button.setAttribute("class", "add_but");
-	add_button.addEventListener("click", () =>{
-		fetch(`${IP}/dbadd?id=${last_id + 1}`)
-		renderDb();
+	add_button.addEventListener("click", async (e) =>{
+		let d = db_orig;
+		fetch(`${IP}/dbadd?id=${last_id + 1}&tb=${d.name}`)
+
+		let val = await getDataBase(d.name)
+		let which_db_id = parseInt(e.target.getAttribute("which_db_id"));
+		renderDb(val, which_db_id);
 	})
 	add_button.textContent = "add new row";
+	add_button.setAttribute("which_db_id", dom_idx);
 
 	let up_button = document.createElement("button");
 	up_button.setAttribute("class", "up_but");
 	up_button.addEventListener("click", () =>{
-		fetch(`${IP}/dbup`, 
+		let d = db_orig;
+		fetch(`${IP}/dbup?tb=${d.name}`, 
 			{method: 'POST',
 			body: JSON.stringify(db)}
 	)})
@@ -142,33 +152,42 @@ async function renderDb()
 
 	let all = document.createElement("div");
 
-	document.body.textContent = "";
+	//document.body.textContent = "";
 	all.appendChild(add_button);
 	all.appendChild(up_button);
 	all.appendChild(table);
-	all.setAttribute("id", "all");
+	all.setAttribute("class", "all");
 
-	document.body.appendChild(all);
-
+	
+	let dom = db_doms[dom_idx]
+	dom.textContent = ""
+	dom.appendChild(all);
 }
 async function start()
 {
-	let val = await getDataBase();
+	db_doms.push(document.getElementById("main"))
+	db_doms.push(document.getElementById("promos"))
+
+	let val = await getDataBase("product");
+	renderDb(val, 0);
+
+	val = await getDataBase("promos");
+	renderDb(val, 1);
 
 
-	document.getElementById("main").innerHTML += "added by js"
-	db = val.db;
+	//document.getElementById("main").innerHTML += "added by js"
+	//db = val.db;
 
-	renderDb();
 	
 }
-async function getDataBase()
+async function getDataBase(table_name)
 {
 	let ret = "";
 	try
 	{
-		const response = await fetch(`${IP}/dball`)
+		let response = await fetch(`${IP}/dball?tb=${table_name}`)
 		ret = await response.json();
+		ret = {name: table_name, db: ret.db};
 	}
 	catch(error)
 	{

@@ -20,7 +20,7 @@ public class HttpRequest {
 		{
 			String paramName = reader.readWord();
 			reader.EatSpace();
-			System.out.println("got param "+ paramName);
+			//System.out.println("got param "+ paramName);
 
 			if(reader.isDone() || reader.CurChar() != '=')
 			{
@@ -33,7 +33,7 @@ public class HttpRequest {
 
 			String paramValue = reader.readWord();
 
-			System.out.println("got param val "+ paramValue);
+			//System.out.println("got param val "+ paramValue);
 			reader.EatSpace();
 			ret.put(paramName, paramValue);
 

@@ -35,7 +35,6 @@ public class WordReader {
 	}
 	public String getRemaining()
 	{
-		
 		return str.substring(curIdx);
 	}
 	public String readWord()
@@ -50,7 +49,7 @@ public class WordReader {
 
 		int wordStart = i;
 
-		while(i < str.length() && (Character.isAlphabetic(str.charAt(i)) || Character.isDigit(str.charAt(i))))
+		while(i < str.length() && (Character.isAlphabetic(str.charAt(i)) || Character.isDigit(str.charAt(i)) || str.charAt(i) == '_'))
 		{
 			i++;
 		}

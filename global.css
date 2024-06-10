@@ -1,17 +1,32 @@
+#page
+{
+	display: flex;
+	flex-direction: column;
+}
 @media only screen and (min-width: 600px) {
 	#services
 	{
 		display: flex;
+		//background-color: blue;
 	}
 	#col2
 	{
 		width: 20%;
-		background-color: blue;
+		//background-color: blue;
 	}
 	#col
 	{
-		width: 10%;
-		background-color: red;
+		width: 20%;
+		text-align: center;
+		//background-color: red;
+	}
+	#page
+	{
+		margin: 20px;
+		padding: 5px;
+		background-color: #dddddd;
+		position: relative;
+		top: 50px;
 	}
 }
 @media only screen and (max-width: 600px) {
@@ -25,8 +40,21 @@
 	}
 	#col
 	{
-		width: 100#;
-		background-color: red;
+		width: 100%;
+		text-align: center;
+		//background-color: red;
+	}
+	#page
+	{
+		margin: 0;
+		padding: 0;
+		background-color: #dddddd;
+		position: relative;
+		top: 50px;
+	}
+	body
+	{
+		margin: 0;
 	}
 }
 
@@ -42,10 +70,6 @@
 	left: 0px;
 	top: 0px;
 	width: 100%;
+	color: white;
 	height: 50px;
-}
-.page
-{
-	position: relative;
-	top: 50px;
 }
