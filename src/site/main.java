@@ -262,7 +262,7 @@ public class main {
 	}
 
 	public static void main(String[] args) throws JSONException {
-		IP = "192.168.159.131";
+		IP = "192.168.1.2";
 		port = 42069;
 		Random rand = new Random();
 		users = new HashMap<String, User>();
@@ -364,9 +364,31 @@ public class main {
 				{
 					SendFile("common.js", socket);
 				}
+				else if(reqHttp.url.equals("/uploadimg"))
+				{
+					System.out.println("req is upimg"+req);
+					SendFile("chat.js", socket);
+				}
 				else if(reqHttp.url.equals("/chat.js"))
 				{
 					SendFile("chat.js", socket);
+				}
+				else if(reqHttp.url.equals("/sendimg"))
+				{
+					String userName = reqHttp.params.get("u");
+					String message = reqHttp.body;
+					//message = "data:image/jpg;base64,"+ Base64.getEncoder().encodeToString(message.getBytes("UTF-8"));
+					message = message;
+
+
+					System.out.println("u  "+ userName + ", message " + message);
+
+					ws.SendImgTo(message, userName, users);
+
+					OutputStream outputStream = socket.getOutputStream();
+					outputStream.write(("ok").getBytes("UTF-8"));
+					outputStream.close();
+
 				}
 				else if(reqHttp.url.equals("/send"))
 				{

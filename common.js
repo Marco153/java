@@ -1,10 +1,14 @@
-export const IP = "192.168.159.131"
+export const IP = "192.168.1.2"
 export const fetch_IP = `http://${IP}:42069`
 
 
-export async function createWSConnection(on_message_func)
+export async function createWSConnection(on_message_func, endpoint)
 {
-	let socket = new WebSocket(`ws://${IP}:42070`);
+	let endp_str = ""
+	if(endpoint != undefined)
+		endp_str = endpoint
+
+	let socket = new WebSocket(`ws://${IP}:42070${endp_str}`);
 	if(socket == null)
 	{
 		//sessionStorage.setItem("socket", {val: socket})

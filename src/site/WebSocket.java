@@ -28,6 +28,27 @@ public class WebSocket extends Thread{
 	}
 	public List<Client> clients = new ArrayList<Client>();
 	//public atic Map<String, User> users;
+	public void SendImgTo(String message, String userName, Map<String, User> users)
+	{
+		for (Map.Entry<String, User> pair : users.entrySet())
+		{
+			User c = pair.getValue();
+			System.out.println("iterating "+c.name +" and target is "+userName);
+			if(c.name.equals(userName) && c.socketImg != null)
+			{
+				System.out.println("found "+c.name);
+				try
+				{
+					OutputStream out = c.socketImg.getOutputStream();
+					WebSocket.sendMessage(out, message);
+				} catch (IOException ex) {
+					System.out.println("Server exception: " + ex.getMessage());
+					ex.printStackTrace();
+				}
+				break;
+			}
+		}
+	}
 	public void SendMessageTo(String message, String userName, Map<String, User> users)
 	{
 		for (Map.Entry<String, User> pair : users.entrySet())
@@ -47,10 +68,6 @@ public class WebSocket extends Thread{
 				}
 				break;
 			}
-		}
-		for(int i = 0; i < users.size(); i++)
-		{
-			Client c = clients.get(i);
 		}
 	}
 	public void BroadCast(String str)
@@ -112,7 +129,12 @@ public class WebSocket extends Thread{
 					break;
 				}
 
-				u.socket = socket;
+				if(reqHttp.url.equals("/img"))
+				{
+					u.socketImg = socket;
+				}
+				else
+					u.socket = socket;
 
 				String secKey = reqHttp.headers.get("Sec-WebSocket-Key");
 
