@@ -33,7 +33,7 @@ public class WebSocket extends Thread{
 		for (Map.Entry<String, User> pair : users.entrySet())
 		{
 			User c = pair.getValue();
-			System.out.println("iterating "+c.name +" and target is "+userName);
+			System.out.println("iterating "+c.name +" and target is "+userName + ", its socket "+ c.socketImg);
 			if(c.name.equals(userName) && c.socketImg != null)
 			{
 				System.out.println("found "+c.name);
@@ -106,11 +106,11 @@ public class WebSocket extends Thread{
 				c.s = socket;
 				clients.add(c);
 
-				byte[] buffer = new byte[4096];
+				byte[] buffer = new byte[1024 * 1028 * 6];
 				int bytesRead;
 				ByteArrayOutputStream byteArray = new ByteArrayOutputStream();
 
-				bytesRead = in.read(buffer, 0, 4096);
+				bytesRead = in.read(buffer, 0, 1024 * 1024 * 6);
 				byteArray.write(buffer, 0, bytesRead);
 				
 
@@ -132,6 +132,7 @@ public class WebSocket extends Thread{
 				if(reqHttp.url.equals("/img"))
 				{
 					u.socketImg = socket;
+					System.out.println("socket img "+u.socketImg);
 				}
 				else
 					u.socket = socket;
@@ -170,11 +171,14 @@ public class WebSocket extends Thread{
 
 		if (messageLength <= 125) {
 			frame.write(messageLength);
+			System.out.println("125");
 		} else if (messageLength <= 65535) {
 			frame.write(126);
 			frame.write((messageLength >> 8) & 0xFF);
 			frame.write(messageLength & 0xFF);
+			System.out.println("65535");
 		} else {
+			System.out.println("grande " + messageLength);
 			frame.write(127);
 			frame.write((messageLength >> 56) & 0xFF);
 			frame.write((messageLength >> 48) & 0xFF);

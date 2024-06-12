@@ -26,6 +26,7 @@ public class main {
 	public static int port;
 	public static String productTableSchema;
 	public static Map<String, String> tablesSchemas;
+	public static Map<String, String> waitingImages;
 
 	public static Map<String, User> users;
 
@@ -234,6 +235,70 @@ public class main {
 			SendFile("denied.html", socket);
 		}
 	}
+
+	public static String GetBodyRemainingBedy(Socket socket, HttpRequest reqHttp)
+	{
+
+		String req = "";
+		try
+		{
+			int bodyLen = reqHttp.body.length();
+			String conLenStr = reqHttp.headers.get("Content-Length");
+			System.out.println("on remaining body conLenStr "+conLenStr + " bodylen "+ bodyLen);
+				
+			if(conLenStr == null && bodyLen == 0)
+				return "";
+			Integer number;
+
+			// limit of all packets combined
+			int actualConLen = 1024 * 1024 * 4;
+
+			if(conLenStr != null)
+			{
+				try {
+				    actualConLen = Integer.valueOf(conLenStr);
+				} catch (NumberFormatException e) {
+				    System.out.println("Invalid integer input");
+				}
+			}
+
+			
+			int stillToGet = actualConLen - bodyLen;
+
+			System.out.println("remaining body bytes "+stillToGet);
+
+			InputStream inputStream = socket.getInputStream();
+
+
+			byte[] buffer = new byte[1024 * 1024 * 6];
+			int curBytesRead = 0;
+			
+			socket.setSoTimeout(1000);
+
+			while(curBytesRead < stillToGet)
+			{
+				ByteArrayOutputStream byteArray = new ByteArrayOutputStream();
+				int bytesRead = socket.getInputStream().read(buffer, 0, 1024 * 1024 * 4);
+
+				byteArray.write(buffer, 0, bytesRead);
+
+				req += byteArray.toString();
+
+				curBytesRead += bytesRead;
+
+			}
+			PrintStream out = new PrintStream(new File("base64file"));
+			out.println(req);
+			out.close();
+			//System.out.println("body req is "+req);
+		}
+		catch(IOException e)
+		{
+			e.printStackTrace();
+		}
+		return req;
+		//socket.setSoTimeout(0);
+	}
 	public static void ChatPage(Socket socket, HttpRequest reqHttp)
 	{
 		try
@@ -267,6 +332,7 @@ public class main {
 		Random rand = new Random();
 		users = new HashMap<String, User>();
 		tablesSchemas = new HashMap<String, String>();
+		waitingImages = new HashMap<String, String>();
 
 		secret = rand.nextInt(999999999);
 
@@ -311,20 +377,30 @@ public class main {
 
 				InputStream inputStream = socket.getInputStream();
 
-				byte[] buffer = new byte[4096];
+				String req = "";
+				int attempts = 0;
+
+				byte[] buffer = new byte[1024 * 1024 * 6];
 				int bytesRead;
 				ByteArrayOutputStream byteArray = new ByteArrayOutputStream();
+				
+				bytesRead = socket.getInputStream().read(buffer, 0, 1024 * 1024 * 4);
+				//System.out.println("bytes are "+buffer);
 
-				bytesRead = socket.getInputStream().read(buffer, 0, 4095);
 				byteArray.write(buffer, 0, bytesRead);
 
 
-				String req = byteArray.toString();
+				req += byteArray.toString();
 
 				HttpRequest reqHttp = new HttpRequest(req);
 
+				reqHttp.body += GetBodyRemainingBedy(socket, reqHttp);
 
-				//System.out.println("req is "+req);
+				//if(appType
+
+
+
+				System.out.println("req is "+req);
 
 
 				String ext = getFileExtension(reqHttp.url);
@@ -373,20 +449,41 @@ public class main {
 				{
 					SendFile("chat.js", socket);
 				}
+				else if(reqHttp.url.equals("/getwaitingimg"))
+				{
+					String imgId = reqHttp.params.get("id");
+					
+					String ret = null;
+
+					String send = "";
+					if(imgId != null)
+						ret = waitingImages.get(imgId);
+
+					if(ret != null)
+						send = createUserRegResponse(1, ret);
+					else
+						send = createUserRegResponse(0, "error");
+
+					SendString(send, socket);
+
+				}
 				else if(reqHttp.url.equals("/sendimg"))
 				{
 					String userName = reqHttp.params.get("u");
 					String message = reqHttp.body;
 					//message = "data:image/jpg;base64,"+ Base64.getEncoder().encodeToString(message.getBytes("UTF-8"));
 					message = message;
+					int uid = rand.nextInt(999999999);
+					String key = Integer.toString(uid) + 'i';
+					waitingImages.put(key, message);
 
 
 					System.out.println("u  "+ userName + ", message " + message);
 
-					ws.SendImgTo(message, userName, users);
+					ws.SendImgTo(key, userName, users);
 
 					OutputStream outputStream = socket.getOutputStream();
-					outputStream.write(("ok").getBytes("UTF-8"));
+					outputStream.write(("ok from server").getBytes("UTF-8"));
 					outputStream.close();
 
 				}

@@ -16,13 +16,17 @@ table {
 </style>
 	<header>
 		<script	type="module" src="chat.js"></script>
+		<link rel="stylesheet" href="./global.css">
 	</header>
 	<body>
-		<textarea id="chat_tarea"></textarea>
-		<form id="uploadForm">
-			<input type="file" id="fileInput" accept="image/*">
-			<button type="submit">Upload</button>
-		</form>
+		<div id="chat_tarea_div">
+			<textarea id="chat_tarea" style="width: 100%; height: 100%;"></textarea>
+			<form id="uploadForm">
+				<input type="file" id="fileInput" accept="image/*">
+				<button type="submit">Upload</button>
+				<button id="send_but">Enviar</button>
+			</form>
+		</div>
 		<div id="chat"></div>
 	</body>
 

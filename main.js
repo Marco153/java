@@ -167,12 +167,16 @@ async function start()
 {
 	db_doms.push(document.getElementById("main"))
 	db_doms.push(document.getElementById("promos"))
+	db_doms.push(document.getElementById("users_db"))
 
 	let val = await getDataBase("product");
 	renderDb(val, 0);
 
 	val = await getDataBase("promos");
 	renderDb(val, 1);
+
+	val = await getDataBase("users");
+	renderDb(val, 2);
 
 
 	//document.getElementById("main").innerHTML += "added by js"

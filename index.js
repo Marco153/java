@@ -157,7 +157,7 @@ async function start()
 	page_el.appendChild(maq)
 
 	serv_desc = document.getElementById("col2");
-	servs = ["este e um servico de barra", "pinca sao apertos de roupas", "costuras em geral"]
+	servs = ["este e um servico de barra, no qual é feito um corte para dimiluir s tamanho da manga, pé da calça etc.", "Pinça sao apertos de roupas, geralmente uma pequena costura na cintura ou de baixo pra cima", "costuras em geral,  fechaments de buracos, troca de ziper etc."]
 	let id = {id: 0};
 	insertServ("barra", id);
 	insertServ("pinca", id);

@@ -3,6 +3,10 @@
 	display: flex;
 	flex-direction: column;
 }
+#services
+{
+	border-bottom: 1px solid
+}
 @media only screen and (min-width: 600px) {
 	#services
 	{
@@ -11,7 +15,7 @@
 	}
 	#col2
 	{
-		width: 20%;
+		width: 50%;
 		//background-color: blue;
 	}
 	#col
@@ -29,6 +33,7 @@
 		top: 50px;
 	}
 }
+
 @media only screen and (max-width: 600px) {
 	#services
 	{
@@ -66,7 +71,7 @@
 {
 	background-color: #444444;
 	position: fixed;
-	display: flex;
+	isplay: flex;
 	left: 0px;
 	top: 0px;
 	width: 100%;
