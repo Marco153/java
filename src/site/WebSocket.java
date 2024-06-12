@@ -42,6 +42,13 @@ public class WebSocket extends Thread{
 					OutputStream out = c.socketImg.getOutputStream();
 					WebSocket.sendMessage(out, message);
 				} catch (IOException ex) {
+					/*
+					if(c.socket != null)
+						c.socket.close();
+					if(c.socketImg != null)
+						c.socketImg.close();
+					*/
+
 					System.out.println("Server exception: " + ex.getMessage());
 					ex.printStackTrace();
 				}

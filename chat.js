@@ -90,6 +90,7 @@ document.getElementById('uploadForm').addEventListener('submit', async function(
 					console.log(e)
 			})
 			console.log(res)
+			fileInput.value = null
 		}
 
 
@@ -137,11 +138,18 @@ async function start()
 	chat_sendbutton.addEventListener("click", (e)=>{
 		let chat_tarea        = document.getElementById("chat_tarea");
 
-		fetch(`http://${common.IP}:42069/send?to=${u}`,
+		try
 		{
-				method: "POST",
-				body: chat_tarea.value
-		})
+			fetch(`http://${common.IP}:42069/send?to=${u}`,
+			{
+					method: "POST",
+					body: chat_tarea.value
+			})
+		}
+		catch(err)
+		{
+			console.log(err)
+		}
 		appendConvo(chat_tarea.value, "me", "#4444cc")
 		chat_tarea.value = "";
 	})

@@ -460,7 +460,10 @@ public class main {
 						ret = waitingImages.get(imgId);
 
 					if(ret != null)
+					{
 						send = createUserRegResponse(1, ret);
+						ret = waitingImages.remove(imgId);
+					}
 					else
 						send = createUserRegResponse(0, "error");
 
@@ -493,7 +496,7 @@ public class main {
 					String message = reqHttp.body;
 
 
-					System.out.println("to  "+ userName + ", message " + message);
+					System.out.println("to  "+ userName);
 
 					ws.SendMessageTo(message, userName, users);
 
