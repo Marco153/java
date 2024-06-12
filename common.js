@@ -50,10 +50,21 @@ export async function createImgEl(link, w, h)
 	//let div = document.createElement("div")
 
 	let base64img = ""
-	if(link != undefined)
+	if(link != undefined && link != null && link != "null")
 	{
-		base64img = await fetch(`${fetch_IP}/${link}`)
-		base64img = await base64img.text();
+		try
+		{
+			base64img = await fetch(`${fetch_IP}/${link}`)
+			base64img = await base64img.text();
+		}
+		catch(err)
+		{
+			base64img = "https://www.google.com/url?sa=i&url=https%3A%2F%2Fralfvanveen.com%2Fen%2Fglossary%2Fplaceholder%2F&psig=AOvVaw0eRNhf6pkf9Vwv9MTWIuNp&ust=1718242138349000&source=images&cd=vfe&opi=89978449&ved=0CBIQjRxqFwoTCJjxq_T01IYDFQAAAAAdAAAAABAE"
+		}
+	}
+	else
+	{
+		base64img = "https://www.google.com/url?sa=i&url=https%3A%2F%2Fralfvanveen.com%2Fen%2Fglossary%2Fplaceholder%2F&psig=AOvVaw0eRNhf6pkf9Vwv9MTWIuNp&ust=1718242138349000&source=images&cd=vfe&opi=89978449&ved=0CBIQjRxqFwoTCJjxq_T01IYDFQAAAAAdAAAAABAE"
 	}
 
 	let img = document.createElement("img");

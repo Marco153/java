@@ -49,7 +49,7 @@ async function renderDb(db_orig, dom_idx)
 			let tarea = "";
 			if(value == "id")
 				tarea = document.createTextNode(db[i][value]);
-			else if(value == "image")
+			else if(value == "image" && db[i][value] != null)
 			{
 				tarea = await common.createImgEl(db[i][value], 100, 100)
 
